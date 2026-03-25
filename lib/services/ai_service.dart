@@ -2,8 +2,8 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class AIService {
-  // МАҢЫЗДЫ: Өз API кілтіңізді осында қойыңыз
-  static const String _apiKey = 'AIzaSyDhrv3GZ4gRkRvKTANJ3ltUWfF6Sp8ElI0';
+  // Сенің жаңа API кілтің қосылды
+  static const String _apiKey = 'AIzaSyBkFb_2ZXvpEAPEfM2Y5YfrV3xBDyK41UU';
   
   late final GenerativeModel _model;
   late final ChatSession _chat;
@@ -27,7 +27,7 @@ class AIService {
       return response.text;
     } catch (e) {
       print("AI Service Error: $e");
-      return null;
+      return "Кешіріңіз, AI қазір жауап бере алмай тұр: $e";
     }
   }
 }
