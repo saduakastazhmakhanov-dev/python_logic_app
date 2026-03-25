@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // CORS-ты айналып өту үшін proxy қолданамыз
+  // CORS блоктарын айналып өту үшін Proxy
   final String _proxyUrl = "https://corsproxy.io/?";
   final String _apiUrl = "https://emkc.org/api/v2/piston/execute";
 
@@ -19,9 +19,9 @@ class CompilerService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['run']['output'] ?? "Нәтиже бос";
+        return data['run']['output'] ?? "Нәтиже жоқ";
       } else {
-        return "Қате коды: ${response.statusCode}";
+        return "Сервер қатесі: ${response.statusCode}";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";
