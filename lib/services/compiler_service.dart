@@ -1,3 +1,4 @@
+// lib/services/compiler_service.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -14,10 +15,10 @@ class CompilerService {
         },
         body: jsonEncode({
           "language": "python",
-          "version": "3.10.0", // Нақты нұсқасын көрсеткен дұрыс
+          "version": "3.10.0", // Нақты нұсқасы
           "files": [
             {
-              "name": "main.py", // Файлдың атын қосу міндетті
+              "name": "main.py", // Файл аты міндетті
               "content": code
             }
           ]
@@ -31,15 +32,13 @@ class CompilerService {
         final String output = run['output'] ?? "";
         final String stderr = run['stderr'] ?? "";
         
-        // Егер кодта қате болса (мысалы, синтаксис)
         if (stderr.isNotEmpty) {
           return "Python қатесі:\n$stderr";
         }
         
         return output.isEmpty ? "Бағдарлама орындалды (нәтиже жоқ)." : output;
       } else {
-        // 401 немесе басқа қателер келсе, толық ақпаратты шығару
-        print("Сервер жауабы: ${response.body}");
+        // Басқа қателер келсе (мысалы, 400, 401)
         return "Сервер қатесі: ${response.statusCode}\nКомпилятор уақытша қолжетімсіз.";
       }
     } catch (e) {

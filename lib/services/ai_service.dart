@@ -2,7 +2,7 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class AIService {
-  // Сенің жаңа API кілтің қосылды
+  // Сенің жаңа API кілтің
   static const String _apiKey = 'AIzaSyBkFb_2ZXvpEAPEfM2Y5YfrV3xBDyK41UU';
   
   late final GenerativeModel _model;
@@ -10,7 +10,8 @@ class AIService {
 
   AIService() {
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash-latest',
+      // 'gemini-1.5-flash' орнына 'gemini-pro' қолданамыз, бұл тұрақтырақ
+      model: 'gemini-pro', 
       apiKey: _apiKey,
       systemInstruction: Content.system(
         "Сен мектеп оқушыларына Python үйрететін мейірімді мұғалімсің. Жауаптарды қарапайым мысалдармен, қазақ немесе орыс тілінде бер."
@@ -27,7 +28,8 @@ class AIService {
       return response.text;
     } catch (e) {
       print("AI Service Error: $e");
-      return "Кешіріңіз, AI қазір жауап бере алмай тұр: $e";
+      // Қате туралы нақты ақпарат
+      return "Кешіріңіз, AI қазір жауап бере алмай тұр. Қате: $e";
     }
   }
 }
