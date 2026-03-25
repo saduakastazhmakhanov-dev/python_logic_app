@@ -4,8 +4,7 @@ import 'dart:convert';
 class AIService {
   // OpenAI key задавай безопасно через `flutter run ... --dart-define=OPENAI_API_KEY=...`
   // Не коммить ключ в репозиторий.
-  static const String _apiKey =
-      String.fromEnvironment('OPENAI_API_KEY', defaultValue: '');
+  static const String _apiKey = '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';
 
   // Можешь переключить модель через env, но по умолчанию берём gpt-4o.
   static const String _model =
