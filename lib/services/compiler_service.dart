@@ -1,4 +1,3 @@
-// lib/services/compiler_service.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -10,22 +9,40 @@ class CompilerService {
     try {
       final response = await http.post(
         Uri.parse(_apiUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          // Веб нұсқада кейде қажет болуы мүмкін қосымша headers
+        },
         body: jsonEncode({
           "language": "python",
-          "version": "3.10.0",
-          "files": [{"name": "main.py", "content": code}]
+          "version": "*", // "*" таңбасы ең соңғы қолжетімді нұсқаны автоматты түрде таңдайды
+          "files": [
+            {
+              "content": code
+            }
+          ]
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['run']['output'] ?? "Нәтиже бос.";
+        
+        // Piston API-ден келетін нәтижені немесе қатені (stderr) алу
+        final String output = data['run']['output'] ?? "";
+        final String stderr = data['run']['stderr'] ?? "";
+        
+        if (stderr.isNotEmpty) {
+          return "Python қатесі:\n$stderr";
+        }
+        
+        return output.isEmpty ? "Бағдарлама сәтті орындалды (нәтиже жоқ)." : output;
+      } else if (response.statusCode == 401) {
+        return "Серверге кіруге рұқсат жоқ (401). API шектеулерін тексеріңіз.";
       } else {
-        return "Сервер қатесі: ${response.statusCode}";
+        return "Сервер қатесі: ${response.statusCode}\nЖауап: ${response.body}";
       }
     } catch (e) {
-      return "Интернет байланысын тексеріңіз.\nҚате: $e";
+      return "Байланыс қатесі. Интернетті немесе API мекенжайын тексеріңіз.\nҚате: $e";
     }
   }
 }
