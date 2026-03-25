@@ -10,7 +10,7 @@ class AIService {
 
   AIService() {
     _model = GenerativeModel(
-      model: 'models/gemini-pro',
+      model: 'gemini-1.5-flash-latest',
       apiKey: _apiKey,
       systemInstruction: Content.system(
         "Сен мектеп оқушыларына Python үйрететін мейірімді мұғалімсің. Жауаптарды қарапайым мысалдармен, қазақ немесе орыс тілінде бер."

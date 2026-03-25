@@ -11,13 +11,13 @@ class CompilerService {
         Uri.parse(_apiUrl),
         headers: {
           'Content-Type': 'application/json',
-          // Веб нұсқада кейде қажет болуы мүмкін қосымша headers
         },
         body: jsonEncode({
           "language": "python",
-          "version": "*", // "*" таңбасы ең соңғы қолжетімді нұсқаны автоматты түрде таңдайды
+          "version": "3.10.0", // Нақты нұсқасын көрсеткен дұрыс
           "files": [
             {
+              "name": "main.py", // Файлдың атын қосу міндетті
               "content": code
             }
           ]
@@ -27,22 +27,23 @@ class CompilerService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Piston API-ден келетін нәтижені немесе қатені (stderr) алу
-        final String output = data['run']['output'] ?? "";
-        final String stderr = data['run']['stderr'] ?? "";
+        final run = data['run'];
+        final String output = run['output'] ?? "";
+        final String stderr = run['stderr'] ?? "";
         
+        // Егер кодта қате болса (мысалы, синтаксис)
         if (stderr.isNotEmpty) {
           return "Python қатесі:\n$stderr";
         }
         
-        return output.isEmpty ? "Бағдарлама сәтті орындалды (нәтиже жоқ)." : output;
-      } else if (response.statusCode == 401) {
-        return "Серверге кіруге рұқсат жоқ (401). API шектеулерін тексеріңіз.";
+        return output.isEmpty ? "Бағдарлама орындалды (нәтиже жоқ)." : output;
       } else {
-        return "Сервер қатесі: ${response.statusCode}\nЖауап: ${response.body}";
+        // 401 немесе басқа қателер келсе, толық ақпаратты шығару
+        print("Сервер жауабы: ${response.body}");
+        return "Сервер қатесі: ${response.statusCode}\nКомпилятор уақытша қолжетімсіз.";
       }
     } catch (e) {
-      return "Байланыс қатесі. Интернетті немесе API мекенжайын тексеріңіз.\nҚате: $e";
+      return "Интернет байланысын немесе браузер шектеуін тексеріңіз.\nҚате: $e";
     }
   }
 }
