@@ -1,6 +1,7 @@
 // lib/screens/compiler_screen.dart
 import 'package:flutter/material.dart';
-import '../services/compiler_service.dart';
+import 'dart:async';
+import '../services/pyodide_service.dart';
 import '../services/storage_service.dart';
 import 'auth_screen.dart'; // globalCurrentUser
 
@@ -14,32 +15,61 @@ class _CompilerScreenState extends State<CompilerScreen> {
   final _codeController = TextEditingController(text: "print('Сәлем, Python Logic!')");
   String _output = "Нәтиже осында шығады...";
   bool _isRunning = false;
-  final _compiler = CompilerService();
   final _storage = StorageService();
+  final _pyodide = PyodideService();
 
   List<String> _savedCodes = const [];
+  Timer? _draftSaveDebounce;
 
   @override
   void initState() {
     super.initState();
-    _loadSavedCodesForCurrentUser();
+    _loadInitialStateForCurrentUser();
+    _codeController.addListener(_onCodeChanged);
   }
 
-  Future<void> _loadSavedCodesForCurrentUser() async {
+  Future<void> _loadInitialStateForCurrentUser() async {
     final user = globalCurrentUser;
     if (user == null) return;
 
-    final loaded = await _storage.loadSavedCodes(user.login);
+    final loadedSaved = await _storage.loadSavedCodes(user.login);
+    final draft = await _storage.loadCompilerDraft(user.login);
     if (!mounted) return;
     setState(() {
-      _savedCodes = loaded;
+      _savedCodes = loadedSaved;
+      if (draft['code'] != null && draft['code']!.isNotEmpty) {
+        _codeController.text = draft['code']!;
+      }
+      _output = draft['output'] ?? _output;
     });
+
+    // Подготовим pyodide заранее (чтобы на 1-м запуске не было долгого ожидания).
+    // Если провалится — всё равно сможем показать ошибку при запуске.
+    unawaited(_pyodide.ensureInitialized().catchError((_) {}));
   }
 
   @override
   void dispose() {
+    _draftSaveDebounce?.cancel();
+    _codeController.removeListener(_onCodeChanged);
     _codeController.dispose();
     super.dispose();
+  }
+
+  void _onCodeChanged() {
+    // Дебаунс: сохраняем черновик, когда пользователь перестал печатать.
+    _draftSaveDebounce?.cancel();
+    _draftSaveDebounce = Timer(const Duration(milliseconds: 900), () async {
+      if (!mounted) return;
+      final user = globalCurrentUser;
+      if (user == null) return;
+      if (_isRunning) return; // не трогаем во время выполнения
+      await _storage.saveCompilerDraft(
+        login: user.login,
+        code: _codeController.text,
+        output: _output,
+      );
+    });
   }
 
   String _shortPreview(String code) {
@@ -65,6 +95,13 @@ class _CompilerScreenState extends State<CompilerScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Скрипт сохранен")),
     );
+
+    // Также обновим draft на случай, если пользователь сохранил версию.
+    await _storage.saveCompilerDraft(
+      login: user.login,
+      code: _codeController.text,
+      output: _output,
+    );
   }
 
   void _runCode() async {
@@ -73,12 +110,29 @@ class _CompilerScreenState extends State<CompilerScreen> {
       _output = "Код орындалуда...";
     });
 
-    final result = await _compiler.executePythonCode(_codeController.text);
-    
-    setState(() {
-      _output = result;
-      _isRunning = false;
-    });
+    final user = globalCurrentUser;
+    try {
+      final result = await _pyodide.runPython(_codeController.text);
+      if (!mounted) return;
+      setState(() {
+        _output = result.trim().isNotEmpty ? result : "Нәтиже жоқ";
+        _isRunning = false;
+      });
+
+      if (user != null) {
+        await _storage.saveCompilerDraft(
+          login: user.login,
+          code: _codeController.text,
+          output: _output,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _output = "Ошибка Python: $e";
+        _isRunning = false;
+      });
+    }
   }
 
   @override

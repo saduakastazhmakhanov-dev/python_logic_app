@@ -6,14 +6,16 @@ class CompilerService {
   final String _proxyUrl = "https://corsproxy.io/?";
   final String _apiUrl = "https://emkc.org/api/v2/piston/execute";
 
-  // ВСТАВЬ СЮДА свой Piston / JDoodle API key (если endpoint требует авторизацию).
-  // Если у тебя ключа нет — можно оставить пустым '' (тогда заголовок не отправится).
+  // Если ты оставляешь этот сервис для Piston/JDoodle:
+  // Ключ задаём безопасно через `flutter run ... --dart-define=PISTON_API_KEY=...`
+  // Не коммить ключ в репозиторий.
   //
   // ВАЖНО: у разных Piston-провайдеров может отличаться имя/формат заголовка.
   // Я поставил самый частый вариант: Authorization: Bearer <key>.
   // Если после вставки ключа всё равно 401 — скажи, и я подгоню под точный формат,
   // сверившись с твоими логами ответа.
-static const String _pistonApiKey = '';
+  static const String _pistonApiKey =
+      String.fromEnvironment('PISTON_API_KEY', defaultValue: '');
 
   Future<String> executePythonCode(String code) async {
     try {

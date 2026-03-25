@@ -14,6 +14,7 @@ class StorageService {
 
   String _chatHistoryKey(String login) => 'chat_history_$login';
   String _savedCodesKey(String login) => 'saved_codes_$login';
+  String _compilerDraftKey(String login) => 'compiler_draft_$login';
 
   // Пайдаланушы деректерін алғаш рет сақтау (Регистрация/Логин кезінде)
   Future<void> saveUser(UserAccount user) async {
@@ -33,10 +34,18 @@ class StorageService {
   // Осы функция шақырылмаса, қайта кіргенде бәрі 1-сабақтан басталады
   Future<void> updateProgress(int newProgress, int addedXp) async {
     final prefs = await SharedPreferences.getInstance();
-    int currentXp = prefs.getInt(_keyXp) ?? 0;
-    
+    final login = prefs.getString(_keyLogin);
+
+    // Обновляем Xp/Progress и в legacy ключах, и в ключах, привязанных к логину.
+    int currentXpLegacy = prefs.getInt(_keyXp) ?? 0;
     await prefs.setInt(_keyProgress, newProgress);
-    await prefs.setInt(_keyXp, currentXp + addedXp);
+    await prefs.setInt(_keyXp, currentXpLegacy + addedXp);
+
+    if (login != null) {
+      final currentXpPerUser = prefs.getInt(_xpKeyFor(login)) ?? currentXpLegacy;
+      await prefs.setInt(_progressKeyFor(login), newProgress);
+      await prefs.setInt(_xpKeyFor(login), currentXpPerUser + addedXp);
+    }
   }
 
   // Сақталған пайдаланушыны жүктеу
@@ -117,6 +126,44 @@ class StorageService {
       return decoded.whereType<String>().toList(growable: false);
     } catch (_) {
       return const [];
+    }
+  }
+
+  // =========================
+  // Compiler draft state (per user)
+  // =========================
+
+  Future<void> saveCompilerDraft({
+    required String login,
+    required String code,
+    required String output,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = {
+      'code': code,
+      'output': output,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    await prefs.setString(_compilerDraftKey(login), jsonEncode(payload));
+  }
+
+  Future<Map<String, String>> loadCompilerDraft(String login) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_compilerDraftKey(login));
+    if (raw == null || raw.trim().isEmpty) {
+      return const {'code': '', 'output': ''};
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const {'code': '', 'output': ''};
+      final code = decoded['code'];
+      final output = decoded['output'];
+      return {
+        'code': code is String ? code : '',
+        'output': output is String ? output : '',
+      };
+    } catch (_) {
+      return const {'code': '', 'output': ''};
     }
   }
 }

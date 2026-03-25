@@ -2,11 +2,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AIService {
-  // ВСТАВЬ СЮДА свой Google Gemini API key (AI Studio / Generative Language).
-  // Важно: это ключ от API, который разрешает endpoint:
-  //   /v1beta/models/<model>:generateContent
-  // Пример: "AIza...."
-  static const String _apiKey = 'PASTE_GEMINI_API_KEY_HERE';
+  // Ключ задаём безопасно через `flutter run ... --dart-define=GEMINI_API_KEY=...`
+  // Не коммить ключ в репозиторий.
+  static const String _apiKey =
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
   // Если вдруг конкретная модель даёт 404, попробуй другой вариант:
   // gemini-1.5-flash-latest (рекомендуется) или gemini-1.5-flash-002.
@@ -20,6 +19,10 @@ class AIService {
 
   Future<String?> sendMessage(String message) async {
     try {
+      if (_apiKey.isEmpty) {
+        return "AI ключ не задан. Передай GEMINI_API_KEY через --dart-define.";
+      }
+
       final apiUri = Uri.parse(_apiUrlBase).replace(queryParameters: {
         'key': _apiKey,
       });
