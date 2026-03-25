@@ -5,8 +5,12 @@ import '../models/chat_message.dart';
 
 class StorageService {
   static const String _keyLogin = 'login';
+  static const String _keyIsLogged = 'is_logged';
   static const String _keyProgress = 'progress';
   static const String _keyXp = 'xp';
+
+  String _progressKeyFor(String login) => 'progress_$login';
+  String _xpKeyFor(String login) => 'xp_$login';
 
   String _chatHistoryKey(String login) => 'chat_history_$login';
   String _savedCodesKey(String login) => 'saved_codes_$login';
@@ -15,8 +19,14 @@ class StorageService {
   Future<void> saveUser(UserAccount user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLogin, user.login);
-    await prefs.setInt(_keyProgress, user.progress);
-    await prefs.setInt(_keyXp, user.xp);
+    await prefs.setBool(_keyIsLogged, true);
+
+    // Храним прогресс/XP привязано к логину, но оставляем старые ключи для обратной совместимости.
+    await prefs.setInt(_progressKeyFor(user.login), user.progress);
+    await prefs.setInt(_xpKeyFor(user.login), user.xp);
+
+    await prefs.setInt(_keyProgress, user.progress); // legacy
+    await prefs.setInt(_keyXp, user.xp); // legacy
   }
 
   // ЖАҢА: Сабақ біткенде прогресті жаңарту функциясы
@@ -33,13 +43,19 @@ class StorageService {
   Future<UserAccount?> loadUser() async {
     final prefs = await SharedPreferences.getInstance();
     final login = prefs.getString(_keyLogin);
+    final isLoggedRaw = prefs.getBool(_keyIsLogged);
+    // Бэкап для старых сессий: если флага нет, но login присутствует — считаем, что пользователь залогинен.
+    final isLogged = isLoggedRaw ?? login != null;
     
-    if (login != null) {
+    if (login != null && isLogged) {
+      final progressFromUser = prefs.getInt(_progressKeyFor(login));
+      final xpFromUser = prefs.getInt(_xpKeyFor(login));
+
       return UserAccount(
         login: login,
         password: "", // Парольді сақтамаймыз
-        progress: prefs.getInt(_keyProgress) ?? 1,
-        xp: prefs.getInt(_keyXp) ?? 0,
+        progress: progressFromUser ?? prefs.getInt(_keyProgress) ?? 1,
+        xp: xpFromUser ?? prefs.getInt(_keyXp) ?? 0,
       );
     }
     return null;
@@ -48,7 +64,12 @@ class StorageService {
   // Деректерді өшіру (Шығу)
   Future<void> clearUser() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    // Не удаляем chat history / saved codes (они привязаны к логину).
+    // Удаляем только сессионные данные.
+    await prefs.remove(_keyLogin);
+    await prefs.remove(_keyIsLogged);
+    await prefs.remove(_keyProgress); // legacy
+    await prefs.remove(_keyXp); // legacy
   }
 
   // =========================

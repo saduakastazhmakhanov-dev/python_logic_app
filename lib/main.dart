@@ -13,6 +13,8 @@ void main() async {
   
   if (savedUser != null) {
     globalCurrentUser = savedUser; // auth_screen.dart-тағы жаһандық айнымалы
+  } else {
+    globalCurrentUser = null;
   }
 
   runApp(PythonEduApp(hasUser: savedUser != null));

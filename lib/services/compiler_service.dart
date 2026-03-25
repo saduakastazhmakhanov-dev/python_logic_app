@@ -6,14 +6,37 @@ class CompilerService {
   final String _proxyUrl = "https://corsproxy.io/?";
   final String _apiUrl = "https://emkc.org/api/v2/piston/execute";
 
+  // ВСТАВЬ СЮДА свой Piston / JDoodle API key (если endpoint требует авторизацию).
+  // Если у тебя ключа нет — можно оставить пустым '' (тогда заголовок не отправится).
+  //
+  // ВАЖНО: у разных Piston-провайдеров может отличаться имя/формат заголовка.
+  // Я поставил самый частый вариант: Authorization: Bearer <key>.
+  // Если после вставки ключа всё равно 401 — скажи, и я подгоню под точный формат,
+  // сверившись с твоими логами ответа.
+static const String _pistonApiKey = '';
+
   Future<String> executePythonCode(String code) async {
     try {
+      final apiUri = Uri.parse(_apiUrl);
+      final proxiedUri = Uri.parse('$_proxyUrl${apiUri.toString()}');
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (_pistonApiKey.trim().isNotEmpty) {
+        headers['Authorization'] = 'Bearer $_pistonApiKey';
+      }
+
       final response = await http.post(
-        Uri.parse(_proxyUrl + _apiUrl),
+        proxiedUri,
+        headers: headers,
         body: jsonEncode({
           "language": "python",
           "version": "3.10.0",
-          "files": [{"name": "main.py", "content": code}]
+          "files": [
+            {"name": "main.py", "content": code}
+          ]
         }),
       );
 
@@ -21,7 +44,10 @@ class CompilerService {
         final data = jsonDecode(response.body);
         return data['run']['output'] ?? "Нәтиже жоқ";
       } else {
-        return "Сервер қатесі: ${response.statusCode}";
+        final bodyPreview = response.body.isNotEmpty
+            ? response.body.substring(0, response.body.length.clamp(0, 300))
+            : '';
+        return "Сервер қатесі: ${response.statusCode}. $bodyPreview";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";

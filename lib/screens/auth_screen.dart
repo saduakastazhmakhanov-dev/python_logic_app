@@ -41,6 +41,7 @@ class _AuthScreenState extends State<AuthScreen> {
           );
           globalCurrentUser = user;
         } catch (e) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Пайдаланушы табылмады немесе пароль қате!"), backgroundColor: Colors.red),
           );
@@ -48,7 +49,9 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
       
-      // Жүйеге кіргенде деректі қайта сақтап қоямыз
+      // Жүйеге кіргенде деректі қайта сақтап қоямыз.
+      // StorageService.saveUser() также выставляет флаг `is_logged`,
+      // поэтому сессия сохраняется при F5 (Flutter Web).
       await _storage.saveUser(globalCurrentUser!);
       _goToMain();
 
