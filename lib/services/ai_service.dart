@@ -8,7 +8,7 @@ class AIService {
 
   AIService() {
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash', // Пакетті жаңартқан соң осы нұсқа істейді
+      model: 'gemini-1.5-flash-latest', 
       apiKey: _apiKey,
     );
     _chat = _model.startChat();
@@ -19,7 +19,8 @@ class AIService {
       final response = await _chat.sendMessage(Content.text(message));
       return response.text;
     } catch (e) {
-      return "Қате: $e";
+      // Егер тағы қате шықса, себебін экранға шығарады
+      return "AI Қатесі: $e";
     }
   }
 }
