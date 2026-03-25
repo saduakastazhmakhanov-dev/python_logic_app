@@ -3,18 +3,16 @@ import 'dart:convert';
 
 class AIService {
   static const String _apiKey = 'AIzaSyBkFb_2ZXvpEAPEfM2Y5YfrV3xBDyK41UU';
-  
+  final String _proxyUrl = "https://corsproxy.io/?";
+  final String _apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$_apiKey";
+
   Future<String?> sendMessage(String message) async {
-    final String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey";
-    
     try {
       final response = await http.post(
-        Uri.parse(url),
+        Uri.parse(_proxyUrl + _apiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "contents": [{
-            "parts": [{"text": message}]
-          }]
+          "contents": [{"parts": [{"text": message}]}]
         }),
       );
 
@@ -22,9 +20,9 @@ class AIService {
         final data = jsonDecode(response.body);
         return data['candidates'][0]['content']['parts'][0]['text'];
       }
-      return "Қате коды: ${response.statusCode}";
+      return "AI қатесі: ${response.statusCode}";
     } catch (e) {
-      return "AI байланыс қатесі: $e";
+      return "AI-ға қосылу мүмкін емес";
     }
   }
 }
