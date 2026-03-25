@@ -6,7 +6,7 @@ class StorageService {
   static const String _keyProgress = 'progress';
   static const String _keyXp = 'xp';
 
-  // Пайдаланушы деректерін сақтау (Логин кезінде)
+  // Пайдаланушы деректерін алғаш рет сақтау (Регистрация/Логин кезінде)
   Future<void> saveUser(UserAccount user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLogin, user.login);
@@ -14,7 +14,8 @@ class StorageService {
     await prefs.setInt(_keyXp, user.xp);
   }
 
-  // ЖАҢА: Прогресті жаңарту функциясы (Осы жетпей тұрған еді)
+  // ЖАҢА: Сабақ біткенде прогресті жаңарту функциясы
+  // Осы функция шақырылмаса, қайта кіргенде бәрі 1-сабақтан басталады
   Future<void> updateProgress(int newProgress, int addedXp) async {
     final prefs = await SharedPreferences.getInstance();
     int currentXp = prefs.getInt(_keyXp) ?? 0;
@@ -23,6 +24,7 @@ class StorageService {
     await prefs.setInt(_keyXp, currentXp + addedXp);
   }
 
+  // Сақталған пайдаланушыны жүктеу
   Future<UserAccount?> loadUser() async {
     final prefs = await SharedPreferences.getInstance();
     final login = prefs.getString(_keyLogin);
@@ -30,7 +32,7 @@ class StorageService {
     if (login != null) {
       return UserAccount(
         login: login,
-        password: "", 
+        password: "", // Парольді сақтамаймыз
         progress: prefs.getInt(_keyProgress) ?? 1,
         xp: prefs.getInt(_keyXp) ?? 0,
       );
@@ -38,6 +40,7 @@ class StorageService {
     return null;
   }
 
+  // Деректерді өшіру (Шығу)
   Future<void> clearUser() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

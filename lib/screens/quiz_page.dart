@@ -19,17 +19,18 @@ class _QuizPageState extends State<QuizPage> {
   final _storage = StorageService();
 
   void _nextQuestion() async {
-    // Егер бұл соңғы сұрақ болса
     if (_currentQuestionIndex >= widget.lesson.quiz.length - 1) {
-      
-      // Прогресті сақтау логикасы
-      if (_score >= 1 && globalCurrentUser!.progress == widget.lesson.id) { 
-        globalCurrentUser!.progress++; 
+      // 1. Прогресті есептеу және сақтау
+      if (_score >= 1) {
+        if (globalCurrentUser!.progress == widget.lesson.id) {
+          globalCurrentUser!.progress++; 
+        }
+        globalCurrentUser!.xp += _score * 10;
+        
+        // SharedPreferences-ке нақты жазу
+        await _storage.saveUser(globalCurrentUser!);
       }
-      globalCurrentUser!.xp += _score * 10;
-      await _storage.saveUser(globalCurrentUser!);
 
-      // Нәтиже диалогы
       if (mounted) {
         showDialog(
           context: context,
@@ -44,27 +45,25 @@ class _QuizPageState extends State<QuizPage> {
               ),
             ),
             content: Text(
-              "Нәтиже: $_score / ${widget.lesson.quiz.length}\nXP: +${_score * 10}",
-              style: const TextStyle(fontSize: 16),
+              "Нәтиже: $_score / ${widget.lesson.quiz.length}\nXP: +${_score * 10}\nПрогресс сақталды!",
+              style: const TextStyle(fontSize: 16, color: Colors.white),
             ),
             actions: [
               TextButton(
                 onPressed: () { 
-                  Navigator.pop(dialogContext); // Диалогты жабу
-                  Navigator.pop(context);       // Сабақ бетін жабу
-                  Navigator.pop(context);       // Тізімге қайту
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context);
                 }, 
                 child: const Text(
                   "МӘЗІРГЕ ҚАЙТУ", 
                   style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
                 ),
               ),
-            ], // <--- МЫНАУ КВАДРАТ ЖАҚША actions-ТІ ЖАБАДЫ
-          ), // <--- МЫНАУ AlertDialog-ТЫ ЖАБАДЫ
-        ); // <--- МЫНАУ showDialog-ТЫ ЖАБАДЫ
+            ],
+          ),
+        );
       }
     } else {
-      // Келесі сұраққа өту
       setState(() { 
         _currentQuestionIndex++; 
         _isAnswered = false; 
@@ -78,7 +77,11 @@ class _QuizPageState extends State<QuizPage> {
     final question = widget.lesson.quiz[_currentQuestionIndex];
     
     return Scaffold(
-      appBar: AppBar(title: Text("Тест: ${widget.lesson.title}")),
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        title: Text("Тест: ${widget.lesson.title}"),
+        backgroundColor: Colors.transparent,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -89,39 +92,59 @@ class _QuizPageState extends State<QuizPage> {
               color: Colors.amber,
             ),
             const SizedBox(height: 20),
-            Text(question.question, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text(
+              question.question, 
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)
+            ),
             const SizedBox(height: 30),
-            // Жауап нұсқалары
-            ...List.generate(question.answers.length, (index) => Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              color: _isAnswered 
-                ? (index == question.correctAnswerIndex 
-                    ? Colors.green.withValues(alpha: 0.4) 
-                    : (index == _selectedAnswerIndex ? Colors.red.withValues(alpha: 0.4) : Colors.white10)) 
-                : Colors.white10,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: ListTile(
-                title: Text(question.answers[index], style: const TextStyle(fontSize: 18)),
-                trailing: _isAnswered && index == question.correctAnswerIndex ? const Icon(Icons.check_circle, color: Colors.greenAccent) : null,
-                onTap: _isAnswered ? null : () => setState(() { 
-                  _selectedAnswerIndex = index; 
-                  _isAnswered = true; 
-                  if(index == question.correctAnswerIndex) _score++; 
-                }),
+            // ListView.generate қатесі түзелді: ListView ішіне List.generate салынды
+            Expanded(
+              child: ListView(
+                children: List.generate(
+                  question.answers.length,
+                  (index) => Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    color: _isAnswered 
+                      ? (index == question.correctAnswerIndex 
+                          ? Colors.green.withOpacity(0.4) 
+                          : (index == _selectedAnswerIndex ? Colors.red.withOpacity(0.4) : Colors.white10)) 
+                      : Colors.white10,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    child: ListTile(
+                      title: Text(question.answers[index], style: const TextStyle(fontSize: 18, color: Colors.white)),
+                      trailing: _isAnswered && index == question.correctAnswerIndex 
+                          ? const Icon(Icons.check_circle, color: Colors.greenAccent) 
+                          : null,
+                      onTap: _isAnswered ? null : () => setState(() { 
+                        _selectedAnswerIndex = index; 
+                        _isAnswered = true; 
+                        if(index == question.correctAnswerIndex) _score++; 
+                      }),
+                    ),
+                  ),
+                ),
               ),
-            )),
-            // Түсіндірме
+            ),
             if (_isAnswered) Container(
-              margin: const EdgeInsets.only(top: 20),
+              margin: const EdgeInsets.only(top: 20, bottom: 20),
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(10)),
-              child: Text(question.description, style: const TextStyle(color: Colors.amberAccent, fontSize: 16, fontStyle: FontStyle.italic)),
+              child: Text(
+                question.description, 
+                style: const TextStyle(color: Colors.amberAccent, fontSize: 16, fontStyle: FontStyle.italic)
+              ),
             ),
-            const Spacer(),
             if (_isAnswered) ElevatedButton(
-              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 55), backgroundColor: Colors.amber),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 55), 
+                backgroundColor: Colors.amber,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
               onPressed: _nextQuestion, 
-              child: Text(_currentQuestionIndex >= widget.lesson.quiz.length - 1 ? "АЯҚТАУ" : "КЕЛЕСІ СҰРАҚ", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
+              child: Text(
+                _currentQuestionIndex >= widget.lesson.quiz.length - 1 ? "АЯҚТАУ" : "КЕЛЕСІ СҰРАҚ", 
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)
+              )
             ),
           ],
         ),
