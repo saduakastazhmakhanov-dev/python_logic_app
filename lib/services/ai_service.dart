@@ -2,47 +2,41 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AIService {
-  // Ключ задаём безопасно через `flutter run ... --dart-define=GEMINI_API_KEY=...`
+  // OpenAI key задавай безопасно через `flutter run ... --dart-define=OPENAI_API_KEY=...`
   // Не коммить ключ в репозиторий.
   static const String _apiKey =
-      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+      String.fromEnvironment('OPENAI_API_KEY', defaultValue: '');
 
-  // Если вдруг конкретная модель даёт 404, попробуй другой вариант:
-  // gemini-1.5-flash-latest (рекомендуется) или gemini-1.5-flash-002.
-  static const String _model = 'gemini-1.5-flash-latest';
+  // Можешь переключить модель через env, но по умолчанию берём gpt-4o.
+  static const String _model =
+      String.fromEnvironment('OPENAI_MODEL', defaultValue: 'gpt-4o');
 
+  // Для Flutter Web это чаще всего нужно, чтобы обойти CORS.
+  // В продакшене лучше делать запросы с сервера (не хранить ключ в фронтенде).
   final String _proxyUrl = "https://corsproxy.io/?";
-
-  // Для Web обычно лучше использовать v1beta. Именно тут чаще всего причина 404.
-  final String _apiUrlBase =
-      "https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent";
 
   Future<String?> sendMessage(String message) async {
     try {
       if (_apiKey.isEmpty) {
-        return "AI ключ не задан. Передай GEMINI_API_KEY через --dart-define.";
+        return "AI ключ не задан. Передай OPENAI_API_KEY через --dart-define.";
       }
 
-      final apiUri = Uri.parse(_apiUrlBase).replace(queryParameters: {
-        'key': _apiKey,
-      });
-
-      // corsproxy.io принимает целевой URL в query-string после '?'
+      final apiUri = Uri.parse('https://api.openai.com/v1/chat/completions');
       final proxiedUri = Uri.parse('$_proxyUrl${apiUri.toString()}');
 
       final response = await http.post(
         proxiedUri,
-        headers: const {
+        headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode({
-          "contents": [
-            {
-              "parts": [
-                {"text": message}
-              ]
-            }
-          ]
+          'model': _model,
+          'messages': [
+            {'role': 'user', 'content': message}
+          ],
+          // На случай, если провайдер ограничивает max tokens.
+          'max_tokens': 512,
         }),
       );
 
@@ -50,15 +44,15 @@ class AIService {
         final data = jsonDecode(response.body);
         String? text;
         try {
-          final candidates = data['candidates'];
-          if (candidates is List && candidates.isNotEmpty) {
-            final firstCandidate = candidates.first;
-            final content = firstCandidate['content'];
-            final parts = content is Map ? content['parts'] : null;
-            if (parts is List && parts.isNotEmpty) {
-              final firstPart = parts.first;
-              final t = firstPart['text'];
-              if (t is String) text = t;
+          final choices = data['choices'];
+          if (choices is List && choices.isNotEmpty) {
+            final firstChoice = choices.first;
+            if (firstChoice is Map) {
+              final message = firstChoice['message'];
+              if (message is Map) {
+                final content = message['content'];
+                if (content is String) text = content;
+              }
             }
           }
         } catch (_) {

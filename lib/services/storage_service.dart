@@ -5,6 +5,9 @@ import '../models/chat_message.dart';
 
 class StorageService {
   static const String _keyLogin = 'login';
+  // Новое имя, как просил ТЗ.
+  static const String _keyIsLoggedIn = 'isLoggedIn';
+  // Legacy (оставляю для совместимости со старыми сборками).
   static const String _keyIsLogged = 'is_logged';
   static const String _keyProgress = 'progress';
   static const String _keyXp = 'xp';
@@ -20,7 +23,8 @@ class StorageService {
   Future<void> saveUser(UserAccount user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLogin, user.login);
-    await prefs.setBool(_keyIsLogged, true);
+    await prefs.setBool(_keyIsLoggedIn, true);
+    await prefs.setBool(_keyIsLogged, true); // legacy
 
     // Храним прогресс/XP привязано к логину, но оставляем старые ключи для обратной совместимости.
     await prefs.setInt(_progressKeyFor(user.login), user.progress);
@@ -28,6 +32,15 @@ class StorageService {
 
     await prefs.setInt(_keyProgress, user.progress); // legacy
     await prefs.setInt(_keyXp, user.xp); // legacy
+  }
+
+  Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedInRaw = prefs.getBool(_keyIsLoggedIn);
+    final isLoggedLegacy = prefs.getBool(_keyIsLogged);
+    // Бэкап для старых сессий.
+    final loginPresent = prefs.getString(_keyLogin) != null;
+    return isLoggedInRaw ?? isLoggedLegacy ?? loginPresent;
   }
 
   // ЖАҢА: Сабақ біткенде прогресті жаңарту функциясы
@@ -52,9 +65,10 @@ class StorageService {
   Future<UserAccount?> loadUser() async {
     final prefs = await SharedPreferences.getInstance();
     final login = prefs.getString(_keyLogin);
+    final isLoggedInRaw = prefs.getBool(_keyIsLoggedIn);
     final isLoggedRaw = prefs.getBool(_keyIsLogged);
     // Бэкап для старых сессий: если флага нет, но login присутствует — считаем, что пользователь залогинен.
-    final isLogged = isLoggedRaw ?? login != null;
+    final isLogged = isLoggedInRaw ?? isLoggedRaw ?? login != null;
     
     if (login != null && isLogged) {
       final progressFromUser = prefs.getInt(_progressKeyFor(login));
@@ -76,6 +90,7 @@ class StorageService {
     // Не удаляем chat history / saved codes (они привязаны к логину).
     // Удаляем только сессионные данные.
     await prefs.remove(_keyLogin);
+    await prefs.remove(_keyIsLoggedIn);
     await prefs.remove(_keyIsLogged);
     await prefs.remove(_keyProgress); // legacy
     await prefs.remove(_keyXp); // legacy

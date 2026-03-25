@@ -9,15 +9,15 @@ void main() async {
   
   // Сақталған пайдаланушыны тексеру
   final storage = StorageService();
-  final savedUser = await storage.loadUser();
-  
-  if (savedUser != null) {
-    globalCurrentUser = savedUser; // auth_screen.dart-тағы жаһандық айнымалы
+  final loggedIn = await storage.isLoggedIn();
+
+  if (loggedIn) {
+    globalCurrentUser = await storage.loadUser();
   } else {
     globalCurrentUser = null;
   }
 
-  runApp(PythonEduApp(hasUser: savedUser != null));
+  runApp(PythonEduApp(hasUser: loggedIn && globalCurrentUser != null));
 }
 
 class PythonEduApp extends StatelessWidget {
