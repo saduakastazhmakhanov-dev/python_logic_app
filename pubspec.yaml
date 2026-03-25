@@ -1,0 +1,27 @@
+name: python_logic_app
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0' # SDK нұсқасын тұрақты етіп қойдық
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Пакеттер бір деңгейде тұруы керек
+  cupertino_icons: ^1.0.8
+  google_generative_ai: ^0.4.5
+  shared_preferences: ^2.5.4
+  http: ^1.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Мұнда тек бір рет қана қалуы керек:
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
