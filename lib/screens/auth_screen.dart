@@ -3,7 +3,7 @@ import '../models/user_account.dart';
 import '../services/storage_service.dart';
 import 'main_navigation.dart';
 
-// Уақытша тізім тек "admin" үшін қалсын
+// Тек бірінші рет кіретіндерге арналған уақытша дерек
 List<UserAccount> mockAccounts = [UserAccount(login: "admin", password: "123456")];
 UserAccount? globalCurrentUser;
 
@@ -27,14 +27,14 @@ class _AuthScreenState extends State<AuthScreen> {
     String password = _passController.text.trim();
 
     if (_isLoginMode) {
-      // КІРУ ЛОГИКАСЫ: Алдымен жадтан (Storage) іздейміз
+      // 1. Жадтан деректі жүктеп көреміз
       final savedUser = await _storage.loadUser();
       
-      // Егер жадта осы атпен адам болса және пароль сәйкес келсе
+      // 2. Егер жадта осы атпен адам болса — соны қолданамыз (Прогресс осы жерде сақталады)
       if (savedUser != null && savedUser.login == login) {
-        globalCurrentUser = savedUser; // Ескі прогресі бар қолданушыны жүктейміз
+        globalCurrentUser = savedUser;
       } else {
-        // Егер жадта жоқ болса, mock-тан іздейміз
+        // 3. Егер жадта жоқ болса, mock тізімнен іздейміз
         try {
           final user = mockAccounts.firstWhere(
             (a) => a.login == login && a.password == password,
@@ -48,12 +48,13 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
       
+      // Жүйеге кіргенде деректі қайта сақтап қоямыз
       await _storage.saveUser(globalCurrentUser!);
       _goToMain();
 
     } else {
-      // ТІРКЕЛУ ЛОГИКАСЫ
-      final newUser = UserAccount(login: login, password: password);
+      // ТІРКЕЛУ: Жаңа пайдаланушы жасау
+      final newUser = UserAccount(login: login, password: password, progress: 1, xp: 0);
       globalCurrentUser = newUser;
       await _storage.saveUser(newUser); 
       _goToMain();
