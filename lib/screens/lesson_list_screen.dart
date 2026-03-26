@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/lesson_model.dart';
 import 'auth_screen.dart'; // globalCurrentUser үшін
 import 'lesson_page.dart';
+import 'logic_challenges_screen.dart';
 
 // Сабақтар деректері (Модельге толық айналдырылған нұсқасы)
 final List<Lesson> lessonsData = [
@@ -150,9 +151,36 @@ class _LessonListScreenState extends State<LessonListScreen> {
       appBar: AppBar(title: const Text("Оқу бағдарламасы")),
       body: ListView.builder(
         padding: const EdgeInsets.all(10),
-        itemCount: lessonsData.length,
+        itemCount: lessonsData.length + 1,
         itemBuilder: (context, i) {
-          final lesson = lessonsData[i];
+          if (i == 0) {
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              color: Colors.white24,
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                leading: const Icon(Icons.psychology, color: Colors.amber, size: 35),
+                title: const Text(
+                  "Логикалық жаттығулар",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                subtitle: const Text("Parson's Problems және Predict Output"),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (c) => const LogicChallengesScreen()),
+                  );
+                  if (!mounted) return;
+                  setState(() {});
+                },
+              ),
+            );
+          }
+
+          final lesson = lessonsData[i - 1];
           // globalCurrentUser null емес екеніне көз жеткізіңіз
           bool isLocked = globalCurrentUser != null && lesson.id > globalCurrentUser!.progress;
           bool isCompleted = globalCurrentUser != null && lesson.id < globalCurrentUser!.progress;
