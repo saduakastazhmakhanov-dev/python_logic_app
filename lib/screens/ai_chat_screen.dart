@@ -80,7 +80,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     setState(() {
       _messages.add(Message(
         role: 'ai',
-        text: response ?? 'Жауап алу мүмкін болмады.',
+        text: response,
         time: DateTime.now(),
       ));
       _isLoading = false;
