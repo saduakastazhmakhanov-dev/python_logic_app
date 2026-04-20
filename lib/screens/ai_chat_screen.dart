@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/ai_service.dart';
+import 'package:python_logic_app/services/ai_service.dart';
 import '../services/storage_service.dart';
 import '../models/chat_message.dart';
 import 'auth_screen.dart'; // globalCurrentUser
@@ -12,7 +12,7 @@ class AIChatScreen extends StatefulWidget {
 
 class _AIChatScreenState extends State<AIChatScreen> {
   final _controller = TextEditingController();
-  final _ai = AIService();
+ final AiTutorService aiService = AiTutorService();
   final _storage = StorageService();
   
   // Бастапқы хабарлама
@@ -52,6 +52,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   // ТҮЗЕЛГЕН: Хабарлама жіберу
+ // ТҮЗЕЛГЕН: Хабарлама жіберу
   void _sendMessage() async {
     if (globalCurrentUser == null) return;
 
@@ -68,10 +69,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = true;
     });
 
-    // ТҮЗЕЛГЕН: Логин жіберудің қажеті жоқ, сервис өзі табады
+    // Логин жіберудің қажеті жоқ, сервис өзі табады
     await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
 
-    final response = await _ai.sendMessage(userMsg);
+    // МІНЕ, ОСЫ ЖЕР ТҮЗЕЛДІ: _ai емес aiService деп жазылады және getAiHint шақырылады
+    final response = await aiService.getAiHint(userMsg, "Бұл компиляторсыз қойылған жалпы сұрақ");
     
     if (!mounted) return;
 
@@ -84,7 +86,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = false;
     });
 
-    // ТҮЗЕЛГЕН: Жаңа хабарламаны сақтау
+    // Жаңа хабарламаны сақтау
     await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
   }
 
@@ -189,4 +191,4 @@ class _AIChatScreenState extends State<AIChatScreen> {
       ),
     );
   }
-}
+  }
