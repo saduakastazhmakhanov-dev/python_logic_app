@@ -7,6 +7,7 @@ import 'auth_screen.dart'; // globalCurrentUser үшін
 class QuizPage extends StatefulWidget {
   final Lesson lesson;
   const QuizPage({super.key, required this.lesson});
+
   @override
   State<QuizPage> createState() => _QuizPageState();
 }
@@ -37,6 +38,7 @@ class _QuizPageState extends State<QuizPage> {
           barrierDismissible: false,
           builder: (BuildContext dialogContext) => AlertDialog(
             backgroundColor: const Color(0xFF1E1E1E),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text(
               _score >= 1 ? "Керемет! 🎉" : "Талпыныс 😕", 
               style: TextStyle(
@@ -81,6 +83,7 @@ class _QuizPageState extends State<QuizPage> {
       appBar: AppBar(
         title: Text("Тест: ${widget.lesson.title}"),
         backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -90,6 +93,7 @@ class _QuizPageState extends State<QuizPage> {
               value: (_currentQuestionIndex + 1) / widget.lesson.quiz.length,
               backgroundColor: Colors.white10,
               color: Colors.amber,
+              borderRadius: BorderRadius.circular(10),
             ),
             const SizedBox(height: 20),
             Text(
@@ -97,21 +101,21 @@ class _QuizPageState extends State<QuizPage> {
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)
             ),
             const SizedBox(height: 30),
-            // ListView.generate қатесі түзелді: ListView ішіне List.generate салынды
             Expanded(
               child: ListView(
                 children: List.generate(
                   question.answers.length,
                   (index) => Card(
                     margin: const EdgeInsets.symmetric(vertical: 8),
+                    // ТҮЗЕЛДІ: withOpacity орнына withValues қолданылды
                     color: _isAnswered 
                       ? (index == question.correctAnswerIndex 
-                          ? Colors.green.withOpacity(0.4) 
-                          : (index == _selectedAnswerIndex ? Colors.red.withOpacity(0.4) : Colors.white10)) 
+                          ? Colors.green.withValues(alpha: 0.4) 
+                          : (index == _selectedAnswerIndex ? Colors.red.withValues(alpha: 0.4) : Colors.white10)) 
                       : Colors.white10,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: ListTile(
-                      title: Text(question.answers[index], style: const TextStyle(fontSize: 18, color: Colors.white)),
+                      title: Text(question.answers[index], style: const TextStyle(fontSize: 17, color: Colors.white)),
                       trailing: _isAnswered && index == question.correctAnswerIndex 
                           ? const Icon(Icons.check_circle, color: Colors.greenAccent) 
                           : null,
@@ -126,19 +130,25 @@ class _QuizPageState extends State<QuizPage> {
               ),
             ),
             if (_isAnswered) Container(
-              margin: const EdgeInsets.only(top: 20, bottom: 20),
+              margin: const EdgeInsets.only(top: 10, bottom: 20),
               padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(10)),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05), 
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.3))
+              ),
               child: Text(
                 question.description, 
-                style: const TextStyle(color: Colors.amberAccent, fontSize: 16, fontStyle: FontStyle.italic)
+                style: const TextStyle(color: Colors.amberAccent, fontSize: 15, fontStyle: FontStyle.italic)
               ),
             ),
             if (_isAnswered) ElevatedButton(
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 55), 
                 backgroundColor: Colors.amber,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
               onPressed: _nextQuestion, 
               child: Text(

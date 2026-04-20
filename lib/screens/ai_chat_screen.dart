@@ -1,4 +1,3 @@
-// lib/screens/ai_chat_screen.dart
 import 'package:flutter/material.dart';
 import '../services/ai_service.dart';
 import '../services/storage_service.dart';
@@ -15,6 +14,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final _controller = TextEditingController();
   final _ai = AIService();
   final _storage = StorageService();
+  
+  // Бастапқы хабарлама
   final List<Message> _messages = [
     Message(
       role: 'ai',
@@ -30,25 +31,29 @@ class _AIChatScreenState extends State<AIChatScreen> {
     _loadHistoryForCurrentUser();
   }
 
+  // ТҮЗЕЛГЕН: Чат тарихын жүктеу
   Future<void> _loadHistoryForCurrentUser() async {
-    final user = globalCurrentUser;
-    if (user == null) return;
+    if (globalCurrentUser == null) return;
 
-    final loaded = await _storage.loadChatHistory(user.login);
+    // StorageService-тен List<dynamic> аламыз
+    final List<dynamic> loadedRaw = await _storage.loadChatHistory();
+    
     if (!mounted) return;
 
-    if (loaded.isNotEmpty) {
+    if (loadedRaw.isNotEmpty) {
       setState(() {
-        _messages
-          ..clear()
-          ..addAll(loaded);
+        _messages.clear();
+        // dynamic деректерді Message моделіне айналдырамыз
+        for (var item in loadedRaw) {
+          _messages.add(Message.fromMap(item));
+        }
       });
     }
   }
 
+  // ТҮЗЕЛГЕН: Хабарлама жіберу
   void _sendMessage() async {
-    final login = globalCurrentUser?.login;
-    if (login == null) return;
+    if (globalCurrentUser == null) return;
 
     final userMsg = _controller.text.trim();
     if (userMsg.isEmpty) return;
@@ -63,12 +68,13 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = true;
     });
 
-    await _storage.saveChatHistory(login, _messages);
-    if (!mounted) return;
+    // ТҮЗЕЛГЕН: Логин жіберудің қажеті жоқ, сервис өзі табады
+    await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
 
     final response = await _ai.sendMessage(userMsg);
     
     if (!mounted) return;
+
     setState(() {
       _messages.add(Message(
         role: 'ai',
@@ -78,7 +84,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = false;
     });
 
-    await _storage.saveChatHistory(login, _messages);
+    // ТҮЗЕЛГЕН: Жаңа хабарламаны сақтау
+    await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
   }
 
   @override
@@ -90,7 +97,12 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Python AI Тьютор")),
+      backgroundColor: const Color(0xFF1E1E1E), // Дизайнды сәл жақсарту
+      appBar: AppBar(
+        title: const Text("Python AI Тьютор"),
+        backgroundColor: Colors.amber,
+        foregroundColor: Colors.black,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -103,27 +115,32 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
                     decoration: BoxDecoration(
-                      color: isUser ? Colors.amber : Colors.white10,
-                      borderRadius: BorderRadius.circular(15),
+                      color: isUser ? Colors.amber : Colors.grey[800],
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(15),
+                        topRight: const Radius.circular(15),
+                        bottomLeft: isUser ? const Radius.circular(15) : Radius.zero,
+                        bottomRight: isUser ? Radius.zero : const Radius.circular(15),
+                      ),
                     ),
                     child: Column(
-                      crossAxisAlignment:
-                          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                       children: [
                         Text(
                           _messages[i].text,
                           style: TextStyle(
                             color: isUser ? Colors.black : Colors.white,
+                            fontSize: 16,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          // Формат: HH:mm (локальное время устройства)
                           '${_messages[i].time.hour.toString().padLeft(2, '0')}:${_messages[i].time.minute.toString().padLeft(2, '0')}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 10,
                             color: isUser ? Colors.black54 : Colors.white54,
                           ),
                         ),
@@ -135,13 +152,36 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
           ),
           if (_isLoading) const LinearProgressIndicator(color: Colors.amber),
-          Padding(
+          Container(
             padding: const EdgeInsets.all(10),
+            color: Colors.black26,
             child: Row(
               children: [
-                Expanded(child: TextField(controller: _controller, decoration: const InputDecoration(hintText: "Сұрақ қойыңыз...", border: OutlineInputBorder()))),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Сұрақ қойыңыз...",
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: Colors.white10,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                FloatingActionButton.small(onPressed: _sendMessage, backgroundColor: Colors.amber, child: const Icon(Icons.send, color: Colors.black)),
+                CircleAvatar(
+                  backgroundColor: Colors.amber,
+                  child: IconButton(
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send, color: Colors.black),
+                  ),
+                ),
               ],
             ),
           ),

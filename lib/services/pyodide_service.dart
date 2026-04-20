@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:html' as html;
-import 'dart:js' as js;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// Запуск Python прямо в браузере через Pyodide (без Piston/JDoodle).
+// 1. Пакетті universal_html арқылы импорттаймыз (Android-та қате бермейді)
+import 'package:universal_html/html.dart' as html;
+
+// 2. ШАРТТЫ ИМПОРТ: dart:js тек браузерде болса ғана жүктеледі
+import 'dart:js' if (dart.library.js) 'dart:js' as js;
+
 class PyodideService {
   static const String _pyodideVersion = '0.26.2';
 
@@ -17,13 +21,17 @@ class PyodideService {
   Future<void>? _initFuture;
 
   Future<void> ensureInitialized() {
+    // Егер бұл веб-сайт болмаса, Pyodide-ты іске қоспаймыз
+    if (!kIsWeb) return Future.value();
+    
     if (_initFuture != null) return _initFuture!;
     _initFuture = _init();
     return _initFuture!;
   }
 
   Future<void> _init() async {
-    // Загружаем pyodide.js один раз.
+    if (!kIsWeb) return;
+
     final existing = html.document.getElementById('pyodide-script');
     if (existing == null) {
       final script = html.ScriptElement()
@@ -43,7 +51,7 @@ class PyodideService {
       await completer.future;
     }
 
-    // Ждём глобальную функцию loadPyodide и создаём объект pyodide.
+    // js.context тек Web-те жұмыс істейді
     if (!js.context.hasProperty('loadPyodide')) {
       throw Exception('loadPyodide is not available after script load');
     }
@@ -56,11 +64,15 @@ class PyodideService {
   }
 
   Future<String> runPython(String code) async {
+    // Android/iOS үшін хабарлама
+    if (!kIsWeb) {
+      return "Python интерпретаторы мобильді нұсқада әзірге қолжетімді емес. Веб нұсқасын қолданыңыз.";
+    }
+
     await ensureInitialized();
 
     final b64 = base64Encode(utf8.encode(code));
 
-    // Оборачиваем пользовательский код так, чтобы вернуть stdout+stderr.
     final python = '''
 import base64, io, sys, traceback
 _code = base64.b64decode("$b64").decode("utf-8")
@@ -85,6 +97,7 @@ _stdout.getvalue() + _stderr.getvalue()
 
   Future<dynamic> _promiseToFuture(dynamic promise) {
     final completer = Completer<dynamic>();
+    // then және catch тек Web-тегі JS Promise үшін
     promise.callMethod('then', [
       (value) {
         if (!completer.isCompleted) completer.complete(value);
@@ -98,4 +111,3 @@ _stdout.getvalue() + _stderr.getvalue()
     return completer.future;
   }
 }
-
