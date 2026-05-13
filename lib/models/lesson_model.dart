@@ -1,24 +1,25 @@
-// lib/models/lesson_model.dart
 class Lesson {
   final int id;
   final String title;
   final String theory;
+  final String videoUrl; 
   final List<QuizQuestion> quiz;
 
   Lesson({
     required this.id, 
     required this.title, 
     required this.theory, 
-    required this.quiz
+    required this.videoUrl,
+    required this.quiz,
   });
 
-  // JSON-нан объект жасау (болашақта пайдалы болуы мүмкін)
   factory Lesson.fromMap(Map<String, dynamic> map) {
     return Lesson(
-      id: map['id'],
-      title: map['title'],
-      theory: map['theory'],
-      quiz: (map['quiz'] as List).map((q) => QuizQuestion.fromMap(q)).toList(),
+      id: map['id'] ?? 0,
+      title: map['title'] ?? "",
+      theory: map['theory'] ?? "",
+      videoUrl: map['videoUrl'] ?? "", 
+      quiz: (map['quiz'] as List?)?.map((q) => QuizQuestion.fromMap(q)).toList() ?? [],
     );
   }
 }
@@ -33,15 +34,15 @@ class QuizQuestion {
     required this.question, 
     required this.answers, 
     required this.correctAnswerIndex, 
-    required this.description
+    required this.description,
   });
 
   factory QuizQuestion.fromMap(Map<String, dynamic> map) {
     return QuizQuestion(
-      question: map['q'],
-      answers: List<String>.from(map['a']),
-      correctAnswerIndex: map['c'],
-      description: map['desc'],
+      question: map['question'] ?? map['q'] ?? "",
+      answers: List<String>.from(map['answers'] ?? map['a'] ?? []),
+      correctAnswerIndex: map['correctAnswerIndex'] ?? map['c'] ?? 0,
+      description: map['description'] ?? map['desc'] ?? "",
     );
   }
 }
