@@ -1,13 +1,21 @@
-// lib/services/ai_service.dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:html' as html; // GitHub Secrets-тен кілтті алу үшін керек
 
 class AiTutorService {
-  // Өзің жіберген OpenAI API кілті:
-  final String apiKey = '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';
+  // GitHub Secrets-ке сақтаған GEMINI_API_KEY мәнін алу
+  // Егер жергілікті компьютерде (local) іске қоссаң, 'КІЛТТІ_ОСЫНДА_УАҚЫТША_ҚОЙ'
+  final String apiKey = const String.fromEnvironment('GEMINI_API_KEY');
 
   Future<String> getAiHint(String studentCode, String compilerOutput) async {
-    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+    if (apiKey.isEmpty) {
+      return "Қате: Gemini API кілті табылмады. GitHub Secrets бөлімін тексеріңіз.";
+    }
+
+    // Gemini 1.5 Flash моделін қолданамыз (жылдам әрі тегін нұсқасы бар)
+    final model = GenerativeModel(
+      model: 'gemini-1.5-flash',
+      apiKey: apiKey,
+    );
 
     final prompt = '''
       Сен информатика пәнінің мұғалімісің. 
@@ -17,43 +25,21 @@ class AiTutorService {
       Компилятордың жауабы немесе қатесі: 
       $compilerOutput
       
-      Маңызды нұсқау: Оқушыға дайын дұрыс кодты берме! Тек қатенің неден шыққанын түсіндіріп, оны қалай түзеу керектігіне қазақ тілінде қысқаша әрі түсінікті логикалық бағыт-бағдар бер.
+      Маңызды нұсқау: Оқушыға дайын дұрыс кодты берме! 
+      Тек қатенің неден шыққанын түсіндіріп, оны қалай түзеу керектігіне қазақ тілінде қысқаша әрі түсінікті логикалық бағыт-бағдар бер.
     ''';
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Authorization': 'Bearer $apiKey', // API кілтті жіберу
-        },
-        body: jsonEncode({
-          "model": "gpt-3.5-turbo", // немесе "gpt-4" деп ауыстыруға болады
-          "messages": [
-            {
-              "role": "system",
-              "content": "Сен мектеп оқушыларына бағдарламалауды үйрететін көмекшісің."
-            },
-            {
-              "role": "user",
-              "content": prompt
-            }
-          ],
-          "temperature": 0.7, // Жауаптың креативтілігі
-        }),
-      );
+      final content = [Content.text(prompt)];
+      final response = await model.generateContent(content);
 
-      if (response.statusCode == 200) {
-        // Қазақ әріптері дұрыс шығуы үшін utf8.decode қолданамыз
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data['choices'][0]['message']['content'];
+      if (response.text != null) {
+        return response.text!;
       } else {
-        // Егер API кілт қате болса немесе ақшасы бітсе, осыны көрсетеді
-        final errorData = jsonDecode(response.body);
-        return "OpenAI сервері қате қайтарды: ${errorData['error']['message']}";
+        return "Gemini бос жауап қайтарды.";
       }
     } catch (e) {
-      return "Интернетке қосылу мүмкін болмады: $e";
+      return "Gemini-ге қосылу кезінде қате шықты: $e";
     }
   }
 }
