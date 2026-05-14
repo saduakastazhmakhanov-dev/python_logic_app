@@ -1,17 +1,16 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'dart:html' as html; // GitHub Secrets-тен кілтті алу үшін керек
 
 class AiTutorService {
-  // GitHub Secrets-ке сақтаған GEMINI_API_KEY мәнін алу
-  // Егер жергілікті компьютерде (local) іске қоссаң, 'КІЛТТІ_ОСЫНДА_УАҚЫТША_ҚОЙ'
-  final String apiKey = const String.fromEnvironment('GEMINI_API_KEY');
+  // Сіз берген Gemini API кілті тікелей енгізілді
+  final String apiKey = 'AIzaSyDPQtOeV8pfQ9s02ccAZdrwnZSoBwkNJdE';
 
   Future<String> getAiHint(String studentCode, String compilerOutput) async {
+    // Кілттің бар-жоғын тексеру
     if (apiKey.isEmpty) {
-      return "Қате: Gemini API кілті табылмады. GitHub Secrets бөлімін тексеріңіз.";
+      return "Қате: Gemini API кілті табылмады.";
     }
 
-    // Gemini 1.5 Flash моделін қолданамыз (жылдам әрі тегін нұсқасы бар)
+    // Gemini 1.5 Flash моделін қолданамыз
     final model = GenerativeModel(
       model: 'gemini-1.5-flash',
       apiKey: apiKey,
