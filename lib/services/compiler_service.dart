@@ -2,14 +2,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // Өте тұрақты және CORS бұғаттауын толық айналып өтетін жаңа прокси
+  // Өте тұрақты және CORS бұғаттауын толық айналып өтетін прокси мен Judge0 API
   final String _proxyUrl = "https://api.allorigins.win/raw?url=";
   final String _apiUrl = "https://judge0-ce.p.sulu.sh/submissions?wait=true";
 
   Future<String> executePythonCode(String code) async {
     try {
       final apiUri = Uri.parse(_apiUrl);
-      // Сұраныс прокси арқылы дұрыс форматта жолданады
       final proxiedUri = Uri.parse('$_proxyUrl${Uri.encodeComponent(apiUri.toString())}');
 
       final response = await http.post(
@@ -27,23 +26,25 @@ class CompilerService {
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
+        // Сыртқы интерфейске тек дайын мәтінді (String) ғана қайтарамыз
         String stdout = data['stdout'] ?? "";
         String stderr = data['stderr'] ?? "";
         String compileOutput = data['compile_output'] ?? "";
 
+        // Егер кодта Python қатесі болса, соны жібереміз
         if (stderr.isNotEmpty) {
-          return stderr; // Python-ның ішкі қатесін ИИ Тьюторға жолдау
+          return stderr.trim();
         }
         if (compileOutput.isNotEmpty) {
-          return compileOutput;
+          return compileOutput.trim();
         }
         if (stdout.isEmpty) {
-          return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
+          return "Код сәтті орындалды, бірақ экранға ештеңе шықпады.\nМысалы: print('Hello')";
         }
         
-        return stdout; // Сәтті орындалған код нәтижесі
+        return stdout.trim(); // Экранға шығатын нақты нәтиже
       } else {
-        return "Сервер жауап бермеді. Статус: ${response.statusCode}";
+        return "Сервер жауап бермеді. Статус коды: ${response.statusCode}";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";
