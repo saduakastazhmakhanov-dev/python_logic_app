@@ -2,21 +2,24 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // Тұрақты әрі тегін ашық Judge0 API сервері
+  // Вебте CORS блогын айналып өтуге арналған прокси мен тұрақты Judge0 API
+  final String _proxyUrl = "https://corsproxy.io/?";
   final String _apiUrl = "https://judge0-ce.p.sulu.sh/submissions?wait=true";
 
   Future<String> executePythonCode(String code) async {
     try {
-      final uri = Uri.parse(_apiUrl);
+      final apiUri = Uri.parse(_apiUrl);
+      // Веб үшін екі сілтемені біріктіреміз
+      final proxiedUri = Uri.parse('$_proxyUrl${apiUri.toString()}');
 
       final response = await http.post(
-        uri,
+        proxiedUri,
         headers: {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
           "source_code": code,
-          "language_id": 71, // 71 — Judge0 жүйесіндегі Python 3 нұсқасының ID-і
+          "language_id": 71, // Python 3
           "stdin": ""
         }),
       );
@@ -24,15 +27,12 @@ class CompilerService {
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Код сәтті орындалғандағы нәтиже (stdout)
         String stdout = data['stdout'] ?? "";
-        // Егер кодта синтаксистік немесе логикалық қате болса (stderr)
         String stderr = data['stderr'] ?? "";
-        // Егер компиляция кезінде қате кетсе (compile_output)
         String compileOutput = data['compile_output'] ?? "";
 
         if (stderr.isNotEmpty) {
-          return stderr; // Python қатесін қайтару
+          return stderr; // ИИ оқи алатын Python-ның ішкі қатесі
         }
         if (compileOutput.isNotEmpty) {
           return compileOutput;
@@ -41,9 +41,9 @@ class CompilerService {
           return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
         }
         
-        return stdout; // Дұрыс орындалған код нәтижесі
+        return stdout;
       } else {
-        return "Сервер жауап бермеді: ${response.statusCode}";
+        return "Сервер жауап бермеді. Статус: ${response.statusCode}";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";
