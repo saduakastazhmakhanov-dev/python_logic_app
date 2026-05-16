@@ -2,54 +2,48 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // CORS блоктарын айналып өту үшін Proxy
+  // Вебтегі CORS блоктарын айналып өту үшін Proxy қолданамыз
   final String _proxyUrl = "https://corsproxy.io/?";
   final String _apiUrl = "https://emkc.org/api/v2/piston/execute";
-
-  // Если ты оставляешь этот сервис для Piston/JDoodle:
-  // Ключ задаём безопасно через `flutter run ... --dart-define=PISTON_API_KEY=...`
-  // Не коммить ключ в репозиторий.
-  //
-  // ВАЖНО: у разных Piston-провайдеров может отличаться имя/формат заголовка.
-  // Я поставил самый частый вариант: Authorization: Bearer <key>.
-  // Если после вставки ключа всё равно 401 — скажи, и я подгоню под точный формат,
-  // сверившись с твоими логами ответа.
-  static const String _pistonApiKey =
-      String.fromEnvironment('PISTON_API_KEY', defaultValue: '');
 
   Future<String> executePythonCode(String code) async {
     try {
       final apiUri = Uri.parse(_apiUrl);
       final proxiedUri = Uri.parse('$_proxyUrl${apiUri.toString()}');
 
+      // Тегін Piston API үшін Authorization заголовогы керек емес, тек Content-Type жеткілікті
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-
-      if (_pistonApiKey.trim().isNotEmpty) {
-        headers['Authorization'] = 'Bearer $_pistonApiKey';
-      }
 
       final response = await http.post(
         proxiedUri,
         headers: headers,
         body: jsonEncode({
           "language": "python",
-          "version": "3.10.0",
+          "version": "*", // "*" белгісі сервердегі бар ең соңғы тұрақты Python нұсқасын автоматты түрде таңдайды
           "files": [
-            {"name": "main.py", "content": code}
+            {
+              "content": code // Файл атауынсыз тікелей кодты жібереміз
+            }
           ]
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['run']['output'] ?? "Нәтиже жоқ";
+        
+        // Сауатты тексеріс: алдымен ішкі қателерді (compile немесе run) қарау
+        if (data['run'] != null) {
+          String output = data['run']['output'] ?? "";
+          if (output.isEmpty) {
+            return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
+          }
+          return output; // Оқушының кодының нәтижесі немесе Python-ның қатесі (SyntaxError және т.б.)
+        }
+        return "Нәтиже жоқ";
       } else {
-        final bodyPreview = response.body.isNotEmpty
-            ? response.body.substring(0, response.body.length.clamp(0, 300))
-            : '';
-        return "Сервер қатесі: ${response.statusCode}. $bodyPreview";
+        return "Сервер қатесі: ${response.statusCode}.";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";
