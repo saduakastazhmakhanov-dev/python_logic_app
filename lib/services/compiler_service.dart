@@ -2,47 +2,48 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // Тікелей Piston API сервері (ешқандай прокси мен кілттің керегі жоқ)
-  final String _apiUrl = "https://emkc.org/api/v2/piston/execute";
+  // Тұрақты әрі тегін ашық Judge0 API сервері
+  final String _apiUrl = "https://judge0-ce.p.sulu.sh/submissions?wait=true";
 
   Future<String> executePythonCode(String code) async {
     try {
       final uri = Uri.parse(_apiUrl);
 
-      // Тек қана Content-Type қалдырамыз, ешқандай Authorization заголовогы керек емес
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-
       final response = await http.post(
         uri,
-        headers: headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
-          "language": "python",
-          "version": "3.10.0", // Нақты нұсқасын жазамыз
-          "files": [
-            {
-              "name": "main.py",
-              "content": code
-            }
-          ]
+          "source_code": code,
+          "language_id": 71, // 71 — Judge0 жүйесіндегі Python 3 нұсқасының ID-і
+          "stdin": ""
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        if (data['run'] != null) {
-          String output = data['run']['output'] ?? "";
-          if (output.isEmpty) {
-            return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
-          }
-          return output; // Кодтың нәтижесі немесе Python-ның ішкі қатесі
+        // Код сәтті орындалғандағы нәтиже (stdout)
+        String stdout = data['stdout'] ?? "";
+        // Егер кодта синтаксистік немесе логикалық қате болса (stderr)
+        String stderr = data['stderr'] ?? "";
+        // Егер компиляция кезінде қате кетсе (compile_output)
+        String compileOutput = data['compile_output'] ?? "";
+
+        if (stderr.isNotEmpty) {
+          return stderr; // Python қатесін қайтару
         }
-        return "Нәтиже бос қайтты.";
+        if (compileOutput.isNotEmpty) {
+          return compileOutput;
+        }
+        if (stdout.isEmpty) {
+          return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
+        }
+        
+        return stdout; // Дұрыс орындалған код нәтижесі
       } else {
-        // Егер сервер бәрібір қате берсе, оның ішкі хабарламасын көру үшін
-        return "Сервер қатесі: ${response.statusCode}\nЖауап: ${response.body}";
+        return "Сервер жауап бермеді: ${response.statusCode}";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";
