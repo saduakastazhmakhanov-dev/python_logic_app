@@ -2,15 +2,15 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // Вебте CORS блогын айналып өтуге арналған прокси мен тұрақты Judge0 API
-  final String _proxyUrl = "https://corsproxy.io/?";
+  // Өте тұрақты және CORS бұғаттауын толық айналып өтетін жаңа прокси
+  final String _proxyUrl = "https://api.allorigins.win/raw?url=";
   final String _apiUrl = "https://judge0-ce.p.sulu.sh/submissions?wait=true";
 
   Future<String> executePythonCode(String code) async {
     try {
       final apiUri = Uri.parse(_apiUrl);
-      // Веб үшін екі сілтемені біріктіреміз
-      final proxiedUri = Uri.parse('$_proxyUrl${apiUri.toString()}');
+      // Сұраныс прокси арқылы дұрыс форматта жолданады
+      final proxiedUri = Uri.parse('$_proxyUrl${Uri.encodeComponent(apiUri.toString())}');
 
       final response = await http.post(
         proxiedUri,
@@ -19,7 +19,7 @@ class CompilerService {
         },
         body: jsonEncode({
           "source_code": code,
-          "language_id": 71, // Python 3
+          "language_id": 71, // Python 3 нұсқасының ID-і
           "stdin": ""
         }),
       );
@@ -32,7 +32,7 @@ class CompilerService {
         String compileOutput = data['compile_output'] ?? "";
 
         if (stderr.isNotEmpty) {
-          return stderr; // ИИ оқи алатын Python-ның ішкі қатесі
+          return stderr; // Python-ның ішкі қатесін ИИ Тьюторға жолдау
         }
         if (compileOutput.isNotEmpty) {
           return compileOutput;
@@ -41,7 +41,7 @@ class CompilerService {
           return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
         }
         
-        return stdout;
+        return stdout; // Сәтті орындалған код нәтижесі
       } else {
         return "Сервер жауап бермеді. Статус: ${response.statusCode}";
       }
