@@ -1,16 +1,16 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class AiTutorService {
-  // Кілтті тікелей жазбаймыз, бірақ егер ортадан оқылмаса, бос қалмайтындай етеміз
+  // Вебте де, мобильді нұсқада да қатесіз оқылатын тұрақты кілт
   final String apiKey = const String.fromEnvironment(
     'GEMINI_API_KEY',
-    defaultValue: 'AIzaSyD4JZeXFTobt5ZSe8Q3haQurc8OAwkPC-s'
+    defaultValue: 'AIzaSyD4JZeXFTobt5ZSe8Q3haQurc8OAwkPC-s',
   );
 
   Future<String> getAiHint(String studentCode, String compilerOutput) async {
-    // Егер бәрібір бос болса немесе дефолт мән өзгермесе
-    if (apiKey.isEmpty || apiKey == 'AIzaSyD4JZeXFTobt5ZSe8Q3haQurc8OAwkPC-s') {
-      return "Қате: Gemini API кілті бапталмаған.";
+    // Егер кілт мүлдем бос болса ғана қате шығады
+    if (apiKey.isEmpty) {
+      return "Қате: Gemini API кілті табылмады.";
     }
 
     final model = GenerativeModel(
@@ -18,8 +18,9 @@ class AiTutorService {
       apiKey: apiKey,
     );
 
+    // Дипломдық зерттеу жұмысыңа сай ағылшын тілі мен Python логикасы біріктірілген промпт
     final prompt = '''
-      Сен мектептегі ағылшын тілі мен Python бағдарламалау логикасын біріктіріп үйрететін AI Тьюторсың. 
+      Сен мектептегі ағылшын тілі мен Python бағдарламалау логикасын біріктіріп үйрететін AI Тьюторсың (Көмекшісің). 
       Оқушы мына Python кодын жазды: 
       $studentCode
       
@@ -29,7 +30,7 @@ class AiTutorService {
       МАҢЫЗДЫ НҰСҚАУ:
       1. Оқушыға ешқандай жағдайда ДАЙЫН ДҰРЫС КОДТЫ БЕРМЕ!
       2. Қатенің неден шыққанын оқушыға қазақ тілінде өте қарапайым, қысқа әрі түсінікті тілмен түсіндір.
-      3. Оқушыға кодты өзі түзетуі үшін тек логикалық бағыт-бағдар бер.
+      3. Оқушыға кодты өзі түзетуі үшін тек логикалық бағыт-бағдар (подсказка) бер.
     ''';
 
     try {
