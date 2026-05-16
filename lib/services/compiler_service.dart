@@ -2,29 +2,28 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CompilerService {
-  // Вебтегі CORS блоктарын айналып өту үшін Proxy қолданамыз
-  final String _proxyUrl = "https://corsproxy.io/?";
+  // Тікелей Piston API сервері (ешқандай прокси мен кілттің керегі жоқ)
   final String _apiUrl = "https://emkc.org/api/v2/piston/execute";
 
   Future<String> executePythonCode(String code) async {
     try {
-      final apiUri = Uri.parse(_apiUrl);
-      final proxiedUri = Uri.parse('$_proxyUrl${apiUri.toString()}');
+      final uri = Uri.parse(_apiUrl);
 
-      // Тегін Piston API үшін Authorization заголовогы керек емес, тек Content-Type жеткілікті
+      // Тек қана Content-Type қалдырамыз, ешқандай Authorization заголовогы керек емес
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
 
       final response = await http.post(
-        proxiedUri,
+        uri,
         headers: headers,
         body: jsonEncode({
           "language": "python",
-          "version": "*", // "*" белгісі сервердегі бар ең соңғы тұрақты Python нұсқасын автоматты түрде таңдайды
+          "version": "3.10.0", // Нақты нұсқасын жазамыз
           "files": [
             {
-              "content": code // Файл атауынсыз тікелей кодты жібереміз
+              "name": "main.py",
+              "content": code
             }
           ]
         }),
@@ -33,17 +32,17 @@ class CompilerService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Сауатты тексеріс: алдымен ішкі қателерді (compile немесе run) қарау
         if (data['run'] != null) {
           String output = data['run']['output'] ?? "";
           if (output.isEmpty) {
             return "Код сәтті орындалды, бірақ экранға ештеңе шықпады (print() қолданыңыз).";
           }
-          return output; // Оқушының кодының нәтижесі немесе Python-ның қатесі (SyntaxError және т.б.)
+          return output; // Кодтың нәтижесі немесе Python-ның ішкі қатесі
         }
-        return "Нәтиже жоқ";
+        return "Нәтиже бос қайтты.";
       } else {
-        return "Сервер қатесі: ${response.statusCode}.";
+        // Егер сервер бәрібір қате берсе, оның ішкі хабарламасын көру үшін
+        return "Сервер қатесі: ${response.statusCode}\nЖауап: ${response.body}";
       }
     } catch (e) {
       return "Байланыс қатесі: $e";
