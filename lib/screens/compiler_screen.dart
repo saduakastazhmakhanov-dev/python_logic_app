@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../services/pyodide_service.dart';
+import '../services/compiler_service.dart'; // ЖАҢАРТЫЛДЫ: Жаңа компилятор
+import '../services/ai_service.dart';       // ЖАҢАРТЫЛДЫ: Gemini ИИ қызметі
 import '../services/storage_service.dart';
 import 'auth_screen.dart'; // globalCurrentUser
 
@@ -15,7 +16,10 @@ class _CompilerScreenState extends State<CompilerScreen> {
   String _output = "Нәтиже осында шығады...";
   bool _isRunning = false;
   final _storage = StorageService();
-  final _pyodide = PyodideService();
+  
+  // ЖАҢАРТЫЛДЫ: Жаңа қызметтерді шақыру
+  final _compilerService = CompilerService();
+  final _aiTutorService = AiTutorService();
 
   List<String> _savedCodes = [];
   Timer? _draftSaveDebounce;
@@ -30,14 +34,12 @@ class _CompilerScreenState extends State<CompilerScreen> {
   Future<void> _loadInitialStateForCurrentUser() async {
     if (globalCurrentUser == null) return;
 
-    // ТҮЗЕЛГЕН: loadSavedCodes енді логин талап етпейді
     final loadedSaved = await _storage.loadSavedCodes();
     final draft = await _storage.loadCompilerDraft();
     
     if (!mounted) return;
     
     setState(() {
-      // dynamic тізімді String тізіміне айналдыру
       _savedCodes = List<String>.from(loadedSaved);
       
       if (draft['code'] != null && draft['code']!.isNotEmpty) {
@@ -45,8 +47,8 @@ class _CompilerScreenState extends State<CompilerScreen> {
       }
       _output = draft['output'] ?? "Нәтиже осында шығады...";
     });
-
-    unawaited(_pyodide.ensureInitialized().catchError((_) {}));
+    
+    // Ескі Pyodide баптаулары бұл жерден толық алынып тасталды
   }
 
   @override
@@ -62,7 +64,6 @@ class _CompilerScreenState extends State<CompilerScreen> {
     _draftSaveDebounce = Timer(const Duration(milliseconds: 900), () async {
       if (!mounted || globalCurrentUser == null || _isRunning) return;
       
-      // ТҮЗЕЛГЕН: saveCompilerDraft енді тек бір Map қабылдайды
       await _storage.saveCompilerDraft({
         'code': _codeController.text,
         'output': _output,
@@ -88,7 +89,6 @@ class _CompilerScreenState extends State<CompilerScreen> {
       }
     });
 
-    // ТҮЗЕЛГЕН: saveSavedCodes тек тізімді қабылдайды
     await _storage.saveSavedCodes(_savedCodes);
     
     if (!mounted) return;
@@ -102,6 +102,7 @@ class _CompilerScreenState extends State<CompilerScreen> {
     });
   }
 
+  // ЖАҢАРТЫЛДЫ: Жаңа компилятор мен ИИ логикасы бар функция
   void _runCode() async {
     setState(() {
       _isRunning = true;
@@ -109,11 +110,30 @@ class _CompilerScreenState extends State<CompilerScreen> {
     });
 
     try {
-      final result = await _pyodide.runPython(_codeController.text);
+      // 1. Кодты Piston API арқылы іске қосу
+      final result = await _compilerService.executePythonCode(_codeController.text);
+      
       if (!mounted) return;
       
       setState(() {
-        _output = result.trim().isNotEmpty ? result : "Нәтиже жоқ (бос қайтты)";
+        _output = result;
+      });
+
+      // 2. Егер кодта логикалық/синтаксистік қате болса, ИИ көмегін қосамыз
+      if (result.contains("Error") || result.contains("Exception") || result.contains("line")) {
+        setState(() {
+          _output += "\n\n🤖 [ИИ Тьютор жүктелуде...]";
+        });
+
+        final aiHint = await _aiTutorService.getAiHint(_codeController.text, result);
+        
+        if (!mounted) return;
+        setState(() {
+          _output += "\n\n🤖 ИИ Тьютор кеңесі:\n$aiHint";
+        });
+      }
+
+      setState(() {
         _isRunning = false;
       });
 
@@ -124,7 +144,7 @@ class _CompilerScreenState extends State<CompilerScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _output = "Python қатесі: $e";
+        _output = "Байланыс немесе жүйелік қате: $e";
         _isRunning = false;
       });
     }
@@ -198,7 +218,7 @@ class _CompilerScreenState extends State<CompilerScreen> {
             ),
           ),
 
-          // Сақталған кодтар тізімі (Көлденең)
+          // Сақталған кодтар тізімі
           if (_savedCodes.isNotEmpty)
             SizedBox(
               height: 50,
@@ -229,7 +249,7 @@ class _CompilerScreenState extends State<CompilerScreen> {
               decoration: BoxDecoration(
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                border: Border.all(color: Colors.amber.withAlpha(76)),
               ),
               child: SingleChildScrollView(
                 child: Text(
