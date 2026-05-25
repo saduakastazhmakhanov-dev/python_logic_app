@@ -1,49 +1,88 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class AiTutorService {
-  // Вебте де, мобильді нұсқада да қатесіз оқылатын тұрақты кілт
-  final String apiKey = const String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: 'AIzaSyD4JZeXFTobt5ZSe8Q3haQurc8OAwkPC-s',
-  );
+  static const String _apiKey = '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';
+  static const String _modelName = 'gemini-2.0-flash';
 
-  Future<String> getAiHint(String studentCode, String compilerOutput) async {
-    // Егер кілт мүлдем бос болса ғана қате шығады
-    if (apiKey.isEmpty) {
-      return "Қате: Gemini API кілті табылмады.";
+  GenerativeModel get _model => GenerativeModel(
+        model: _modelName,
+        apiKey: _apiKey,
+      );
+
+  /// Жалпы чат сұрағы (AI экраны үшін)
+  Future<String> sendChatMessage(String userMessage) async {
+    if (userMessage.trim().isEmpty) {
+      return 'Сұрақ бос болмауы керек.';
     }
 
-    final model = GenerativeModel(
-      model: 'gemini-1.5-flash',
-      apiKey: apiKey,
-    );
-
-    // Дипломдық зерттеу жұмысыңа сай ағылшын тілі мен Python логикасы біріктірілген промпт
-    final prompt = '''
-      Сен мектептегі ағылшын тілі мен Python бағдарламалау логикасын біріктіріп үйрететін AI Тьюторсың (Көмекшісің). 
-      Оқушы мына Python кодын жазды: 
-      $studentCode
-      
-      Компилятордың қайтарған нәтижесі немесе қатесі: 
-      $compilerOutput
-      
-      МАҢЫЗДЫ НҰСҚАУ:
-      1. Оқушыға ешқандай жағдайда ДАЙЫН ДҰРЫС КОДТЫ БЕРМЕ!
-      2. Қатенің неден шыққанын оқушыға қазақ тілінде өте қарапайым, қысқа әрі түсінікті тілмен түсіндір.
-      3. Оқушыға кодты өзі түзетуі үшін тек логикалық бағыт-бағдар (подсказка) бер.
-    ''';
+    const systemPrompt = '''
+Сен мектептегі Python бағдарламалау тьюторысың.
+Оқушыға қазақ тілінде қысқа, түсінікті жауап бер.
+Дайын кодты толығымен берме — тек логикалық бағыт-бағдар бер.
+''';
 
     try {
-      final content = [Content.text(prompt)];
-      final response = await model.generateContent(content);
-
-      if (response.text != null) {
-        return response.text!;
-      } else {
-        return "Gemini бос жауап қайтарды.";
-      }
+      final response = await _model.generateContent([
+        Content.text('$systemPrompt\n\nОқушы сұрағы: $userMessage'),
+      ]);
+      return _extractText(response);
     } catch (e) {
-      return "Gemini-ге қосылу кезінде қате шықты: $e";
+      return _formatError(e);
     }
+  }
+
+  /// Компилятор қатесі бойынша кеңес
+  Future<String> getAiHint(String studentCode, String compilerOutput) async {
+    final prompt = '''
+Сен мектептегі ағылшын тілі мен Python бағдарламалау логикасын біріктіріп үйрететін AI Тьюторсың.
+Оқушы мына Python кодын жазды:
+$studentCode
+
+Компилятордың қайтарған нәтижесі немесе қатесі:
+$compilerOutput
+
+МАҢЫЗДЫ НҰСҚАУ:
+1. Оқушыға ешқандай жағдайда ДАЙЫН ДҰРЫС КОДТЫ БЕРМЕ!
+2. Қатенің неден шыққанын оқушыға қазақ тілінде өте қарапайым, қысқа әрі түсінікті тілмен түсіндір.
+3. Оқушыға кодты өзі түзетуі үшін тек логикалық бағыт-бағдар (подсказка) бер.
+''';
+
+    try {
+      final response = await _model.generateContent([Content.text(prompt)]);
+      return _extractText(response);
+    } catch (e) {
+      return _formatError(e);
+    }
+  }
+
+  String _extractText(GenerateContentResponse response) {
+    final text = response.text?.trim();
+    if (text != null && text.isNotEmpty) return text;
+    return 'Gemini бос жауап қайтарды.';
+  }
+
+  String _formatError(Object error) {
+    final msg = error.toString();
+
+    if (msg.contains('CONSUMER_SUSPENDED') || msg.contains('has been suspended')) {
+      return 'API кілті Google тарапынан тоқтатылған. '
+          'Google AI Studio (aistudio.google.com) арқылы жаңа кілт жасап, '
+          'ai_service.dart файлындағы _apiKey мәнін ауыстырыңыз.';
+    }
+    if (msg.contains('API_KEY_INVALID') || msg.contains('API key not valid')) {
+      return 'API кілті жарамсыз. Google AI Studio-дан жаңа кілт алыңыз.';
+    }
+    if (msg.contains('API_KEY_SERVICE_BLOCKED') || msg.contains('are blocked')) {
+      return 'Бұл API кілтіне Generative Language API рұқсат берілмеген. '
+          'AI Studio-да жасалған Gemini кілтін қолданыңыз (Firebase кілті жарамсыз).';
+    }
+    if (msg.contains('not found') || msg.contains('NOT_FOUND')) {
+      return 'Модель табылмады ($_modelName). Кейінірек қайталап көріңіз.';
+    }
+    if (msg.contains('quota') || msg.contains('RESOURCE_EXHAUSTED')) {
+      return 'API лимиті аяқталды. Біраз күтіп, қайта көріңіз.';
+    }
+
+    return 'Gemini-ге қосылу кезінде қате: $msg';
   }
 }

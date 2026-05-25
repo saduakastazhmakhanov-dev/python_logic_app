@@ -54,8 +54,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
   // ТҮЗЕЛГЕН: Хабарлама жіберу
  // ТҮЗЕЛГЕН: Хабарлама жіберу
   void _sendMessage() async {
-    if (globalCurrentUser == null) return;
-
     final userMsg = _controller.text.trim();
     if (userMsg.isEmpty) return;
     _controller.clear();
@@ -69,11 +67,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = true;
     });
 
-    // Логин жіберудің қажеті жоқ, сервис өзі табады
-    await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+    if (globalCurrentUser != null) {
+      await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+    }
 
-    // МІНЕ, ОСЫ ЖЕР ТҮЗЕЛДІ: _ai емес aiService деп жазылады және getAiHint шақырылады
-    final response = await aiService.getAiHint(userMsg, "Бұл компиляторсыз қойылған жалпы сұрақ");
+    final response = await aiService.sendChatMessage(userMsg);
     
     if (!mounted) return;
 
@@ -86,8 +84,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = false;
     });
 
-    // Жаңа хабарламаны сақтау
-    await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+    if (globalCurrentUser != null) {
+      await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+    }
   }
 
   @override
