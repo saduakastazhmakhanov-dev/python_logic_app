@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/user_account.dart';
 import '../services/storage_service.dart';
 import 'main_navigation.dart';
+import 'package:python_logic_app/widgets/app_logo_painter.dart';
 
 // Уақытша деректер базасы
 List<UserAccount> mockAccounts = [UserAccount(login: "admin", password: "123456")];

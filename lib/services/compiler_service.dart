@@ -1,53 +1,33 @@
-import 'package:http/http.dart' as http;
+// lib/services/compiler_service.dart
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class CompilerService {
-  // Өте тұрақты және CORS бұғаттауын толық айналып өтетін прокси мен Judge0 API
-  final String _proxyUrl = "https://api.allorigins.win/raw?url=";
-  final String _apiUrl = "https://judge0-ce.p.sulu.sh/submissions?wait=true";
-
+  // Экрандағы атауға сәйкес болу үшін функция атын executePythonCode деп өзгерттік
   Future<String> executePythonCode(String code) async {
+    final url = Uri.parse('https://emkc.org/api/v2/piston/execute');
+    
     try {
-      final apiUri = Uri.parse(_apiUrl);
-      final proxiedUri = Uri.parse('$_proxyUrl${Uri.encodeComponent(apiUri.toString())}');
-
       final response = await http.post(
-        proxiedUri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        url,
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "source_code": code,
-          "language_id": 71, // Python 3 нұсқасының ID-і
-          "stdin": ""
+          "language": "python",
+          "version": "3.10.0", 
+          "files": [
+            {"content": code}
+          ]
         }),
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
+      if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
-        // Сыртқы интерфейске тек дайын мәтінді (String) ғана қайтарамыз
-        String stdout = data['stdout'] ?? "";
-        String stderr = data['stderr'] ?? "";
-        String compileOutput = data['compile_output'] ?? "";
-
-        // Егер кодта Python қатесі болса, соны жібереміз
-        if (stderr.isNotEmpty) {
-          return stderr.trim();
-        }
-        if (compileOutput.isNotEmpty) {
-          return compileOutput.trim();
-        }
-        if (stdout.isEmpty) {
-          return "Код сәтті орындалды, бірақ экранға ештеңе шықпады.\nМысалы: print('Hello')";
-        }
-        
-        return stdout.trim(); // Экранға шығатын нақты нәтиже
+        return data['run']['output'] ?? "Нәтиже жоқ";
       } else {
-        return "Сервер жауап бермеді. Статус коды: ${response.statusCode}";
+        return "Сервер қатесі: ${response.statusCode}";
       }
     } catch (e) {
-      return "Байланыс қатесі: $e";
+      return "Интернетке қосылу мүмкін болмады: $e";
     }
   }
 }
