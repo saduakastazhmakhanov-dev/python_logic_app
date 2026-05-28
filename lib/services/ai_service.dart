@@ -1,4 +1,5 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter/foundation.dart';
 
 class AiTutorService {
   static const String _apiKey = 'AIzaSyD5GogFRtWtBF14GGZ2pHCmdqKSgS-L1K0';
@@ -26,7 +27,9 @@ class AiTutorService {
         Content.text('$systemPrompt\n\nОқушы сұрағы: $userMessage'),
       ]);
       return _extractText(response);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Gemini sendChatMessage error: $e');
+      debugPrintStack(stackTrace: st);
       return _formatError(e);
     }
   }
@@ -50,7 +53,9 @@ $compilerOutput
     try {
       final response = await _model.generateContent([Content.text(prompt)]);
       return _extractText(response);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Gemini getAiHint error: $e');
+      debugPrintStack(stackTrace: st);
       return _formatError(e);
     }
   }

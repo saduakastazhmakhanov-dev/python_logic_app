@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:python_logic_app/services/ai_service.dart';
 import '../services/storage_service.dart';
 import '../models/chat_message.dart';
@@ -14,6 +15,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final _controller = TextEditingController();
  final AiTutorService aiService = AiTutorService();
   final _storage = StorageService();
+  final _scrollController = ScrollController();
   
   // Бастапқы хабарлама
   final List<Message> _messages = [
@@ -54,6 +56,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   // ТҮЗЕЛГЕН: Хабарлама жіберу
  // ТҮЗЕЛГЕН: Хабарлама жіберу
   void _sendMessage() async {
+    if (_isLoading) return;
     final userMsg = _controller.text.trim();
     if (userMsg.isEmpty) return;
     _controller.clear();
@@ -67,31 +70,67 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = true;
     });
 
-    if (globalCurrentUser != null) {
-      await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
-    }
+    try {
+      if (globalCurrentUser != null) {
+        await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+      }
 
-    final response = await aiService.sendChatMessage(userMsg);
-    
-    if (!mounted) return;
+      final response = await aiService
+          .sendChatMessage(userMsg)
+          .timeout(const Duration(seconds: 30));
 
-    setState(() {
-      _messages.add(Message(
-        role: 'ai',
-        text: response,
-        time: DateTime.now(),
-      ));
-      _isLoading = false;
-    });
+      if (!mounted) return;
 
-    if (globalCurrentUser != null) {
-      await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+      setState(() {
+        _messages.add(Message(
+          role: 'ai',
+          text: response,
+          time: DateTime.now(),
+        ));
+      });
+
+      if (_scrollController.hasClients) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+
+      if (globalCurrentUser != null) {
+        await _storage.saveChatHistory(_messages.map((e) => e.toMap()).toList());
+      }
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(Message(
+          role: 'ai',
+          text: 'Қате: ИИ 30 секунд ішінде жауап қайтармады. '
+              'Интернет/блоктау/CORS болуы мүмкін. Қайта көріңіз.',
+          time: DateTime.now(),
+        ));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(Message(
+          role: 'ai',
+          text: 'Қате: $e',
+          time: DateTime.now(),
+        ));
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -108,6 +147,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(15),
               itemCount: _messages.length,
               itemBuilder: (context, i) {
@@ -179,7 +219,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 CircleAvatar(
                   backgroundColor: Colors.amber,
                   child: IconButton(
-                    onPressed: _sendMessage,
+                    onPressed: _isLoading ? null : _sendMessage,
                     icon: const Icon(Icons.send, color: Colors.black),
                   ),
                 ),
