@@ -10,7 +10,7 @@ final List<Lesson> lessonsData = [
     id: 1,
     title: "1. Python-ға кіріспе",
     theory: "Python — әлемдегі ең танымал әрі оқуға жеңіл бағдарламалау тілі. Оны 1991 жылы Гвидо ван Россум ойлап тапқан. Негізгі ерекшеліктері: • Кодтың оқылуы өте оңай. • Көптеген салаларда қолданылады. Экранға шығару: print() функциясы қолданылады. Мәтін міндетті түрде тырнақша ішінде жазылуы тиіс. Мысалы: print('Сәлем, әлем!')",
-    videoUrl: "https://youtu.be/la_FZsaFIT0",
+    videoUrl: "https://youtu.be/ymxpfWURgew?si=LLNeeC92bP_xd2u0",
     quiz: [
       QuizQuestion(question: "print(5+5)?", answers: ["55", "10", "Error"], correctAnswerIndex: 1, description: "Математикалық қосынды орындалады."),
       QuizQuestion(question: "Авторы кім?", answers: ["Гвидо", "Билл", "Стив"], correctAnswerIndex: 0, description: "Гвидо ван Россум - Python негізін қалаушы."),
