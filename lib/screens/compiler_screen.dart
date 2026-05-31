@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/compiler_service.dart'; // ЖАҢАРТЫЛДЫ: Жаңа компилятор
-import '../services/ai_service.dart';       // ЖАҢАРТЫЛДЫ: Gemini ИИ қызметі
+import '../services/ai_service.dart';
 import '../services/storage_service.dart';
 import 'auth_screen.dart'; // globalCurrentUser
 
