@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class AiTutorService {
-  static const String _apiKey = String.fromEnvironment('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');
-  static const String _modelName = String.fromEnvironment(
-    'OPENAI_MODEL',
-    defaultValue: 'gpt-5-mini',
-  );
+  // Тікелей кілтті жаздық
+  static const String _apiKey = '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';
+  
+  // Модельді gpt-4o-mini-ге өзгерттік (ол жұмыс істейді)
+  static const String _modelName = 'gpt-4o-mini';
+  
   static final Uri _responsesUrl =
       Uri.parse('https://api.openai.com/v1/responses');
 
@@ -16,9 +17,6 @@ class AiTutorService {
     if (userMessage.trim().isEmpty) {
       return 'Сұрақ бос болмауы керек.';
     }
-
-    final keyError = _validateApiKey();
-    if (keyError != null) return keyError;
 
     const instructions = '''
 Сен мектептегі Python бағдарламалау тьюторысың.
@@ -39,9 +37,6 @@ class AiTutorService {
   }
 
   Future<String> getAiHint(String studentCode, String compilerOutput) async {
-    final keyError = _validateApiKey();
-    if (keyError != null) return keyError;
-
     const instructions = '''
 Сен мектептегі ағылшын тілі мен Python бағдарламалау логикасын біріктіріп үйрететін AI тьюторсың.
 Оқушыға қазақ тілінде өте қарапайым, қысқа және түсінікті жауап бер.
@@ -106,65 +101,18 @@ $compilerOutput
     return _extractText(data);
   }
 
-  String? _validateApiKey() {
-    if (_apiKey.isEmpty) {
-      return 'OpenAI API кілті орнатылмаған. Қосымшаны '
-          '--dart-define=OPENAI_API_KEY=ЖАҢА_OPENAI_KEY арқылы іске қосыңыз.';
-    }
-
-    if (!_apiKey.startsWith('sk-')) {
-      return 'OpenAI API кілті дұрыс емес сияқты. OpenAI API кілті әдетте sk- деп басталады.';
-    }
-
-    return null;
-  }
-
   String _extractText(Map<String, dynamic> data) {
     final outputText = data['output_text'];
     if (outputText is String && outputText.trim().isNotEmpty) {
       return outputText.trim();
     }
-
-    final output = data['output'];
-    if (output is List) {
-      final buffer = StringBuffer();
-      for (final item in output) {
-        if (item is! Map<String, dynamic>) continue;
-        final content = item['content'];
-        if (content is! List) continue;
-        for (final part in content) {
-          if (part is! Map<String, dynamic>) continue;
-          final text = part['text'];
-          if (text is String && text.trim().isNotEmpty) {
-            if (buffer.isNotEmpty) buffer.writeln();
-            buffer.write(text.trim());
-          }
-        }
-      }
-      if (buffer.isNotEmpty) return buffer.toString();
-    }
-
     return 'OpenAI бос жауап қайтарды.';
   }
 
   String _formatError(Object error) {
     if (error is OpenAiApiException) {
-      if (error.statusCode == 401 ||
-          error.code == 'invalid_api_key' ||
-          error.type == 'invalid_request_error') {
-        return 'OpenAI API кілті жарамсыз немесе рұқсаты жоқ. OPENAI_API_KEY мәнін тексеріңіз.';
-      }
-      if (error.statusCode == 429 ||
-          error.code == 'rate_limit_exceeded' ||
-          error.code == 'insufficient_quota') {
-        return 'OpenAI API лимиті аяқталды немесе баланс жеткіліксіз. Біраз күтіп, қайта көріңіз.';
-      }
-      if (error.statusCode == 404 || error.code == 'model_not_found') {
-        return 'OpenAI моделі табылмады ($_modelName). OPENAI_MODEL мәнін тексеріңіз.';
-      }
       return 'OpenAI қатесі: ${error.message}';
     }
-
     return 'OpenAI-ға қосылу кезінде қате: $error';
   }
 }
@@ -185,4 +133,3 @@ class OpenAiApiException implements Exception {
   @override
   String toString() => message;
 }
-
