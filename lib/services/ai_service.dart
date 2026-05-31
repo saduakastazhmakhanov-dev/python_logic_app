@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class AiTutorService {
-  static const String _apiKey = String.fromEnvironment('OPENAI_API_KEY');
+  static const String _apiKey = String.fromEnvironment('Osk-proj-sC3Fg7LwtOElAH2uaKyhH_s7sK2VJTVBwa271dw3ar_tLcp5YoP_4Gq3LrAahqnKRjKrMQh3DdT3BlbkFJuOv9jiZSFxZ4u_R72TAoC5dmBTFi7GkrjhHlgUc1xoxuC9XjPbOr9CNVv5BYqdnG3QUxeti6MA');
   static const String _modelName = String.fromEnvironment(
     'OPENAI_MODEL',
     defaultValue: 'gpt-5-mini',
