@@ -3,21 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
  
 class AiTutorService {
-  static const String _apiKey = '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'; // Мұнда өз кілтіңізді қойыңыз
-  static const String _modelName = 'gpt-4o-mini';
-  static final Uri _chatUrl =
-      Uri.parse('https://api.openai.com/v1/chat/completions');
+  // Мұнда өз Gemini API кілтіңізді қойыңыз
+  static const String _apiKey = 'AIzaSyBj_8YkyL0cpFHEcwpAgExpIgzJkMLdy2E';
+  static const String _modelName = 'gemini-2.0-flash';
+ 
+  Uri get _apiUrl => Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/models/$_modelName:generateContent?key=$_apiKey');
  
   Future<String> sendChatMessage(String userMessage) async {
     if (userMessage.trim().isEmpty) {
       return 'Сұрақ бос болмауы керек.';
     }
  
-    const systemPrompt = '''
-Сен мектептегі Python бағдарламалау тьюторысың.
-Оқушыға қазақ тілінде қысқа, түсінікті жауап бер.
-Дайын кодты толығымен берме, тек логикалық бағыт-бағдар бер.
-''';
+    const systemPrompt =
+        'Сен мектептегі Python бағдарламалау тьюторысың. '
+        'Оқушыға қазақ тілінде қысқа, түсінікті жауап бер. '
+        'Дайын кодты толығымен берме, тек логикалық бағыт-бағдар бер.';
  
     try {
       return await _sendRequest(
@@ -25,19 +26,18 @@ class AiTutorService {
         userMessage: 'Оқушы сұрағы: $userMessage',
       );
     } catch (e, st) {
-      debugPrint('OpenAI sendChatMessage error: $e');
+      debugPrint('Gemini sendChatMessage error: $e');
       debugPrintStack(stackTrace: st);
       return _formatError(e);
     }
   }
  
   Future<String> getAiHint(String studentCode, String compilerOutput) async {
-    const systemPrompt = '''
-Сен мектептегі Python бағдарламалау логикасын үйрететін AI тьюторсың.
-Оқушыға қазақ тілінде өте қарапайым, қысқа және түсінікті жауап бер.
-Ешқашан дайын дұрыс кодты толық берме.
-Тек қатенің себебін түсіндіріп, оқушы өзі түзетуі үшін логикалық бағыт-бағдар бер.
-''';
+    const systemPrompt =
+        'Сен мектептегі Python бағдарламалау логикасын үйрететін AI тьюторсың. '
+        'Оқушыға қазақ тілінде өте қарапайым, қысқа және түсінікті жауап бер. '
+        'Ешқашан дайын дұрыс кодты толық берме. '
+        'Тек қатенің себебін түсіндіріп, оқушы өзі түзетуі үшін логикалық бағыт-бағдар бер.';
  
     final userMessage = '''
 Оқушы мына Python кодын жазды:
@@ -53,7 +53,7 @@ $compilerOutput
         userMessage: userMessage,
       );
     } catch (e, st) {
-      debugPrint('OpenAI getAiHint error: $e');
+      debugPrint('Gemini getAiHint error: $e');
       debugPrintStack(stackTrace: st);
       return _formatError(e);
     }
@@ -65,18 +65,26 @@ $compilerOutput
   }) async {
     final response = await http
         .post(
-          _chatUrl,
-          headers: {
-            'Authorization': 'Bearer $_apiKey',
-            'Content-Type': 'application/json',
-          },
+          _apiUrl,
+          headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'model': _modelName,
-            'max_tokens': 450,
-            'messages': [
-              {'role': 'system', 'content': systemPrompt},
-              {'role': 'user', 'content': userMessage},
+            'system_instruction': {
+              'parts': [
+                {'text': systemPrompt}
+              ]
+            },
+            'contents': [
+              {
+                'role': 'user',
+                'parts': [
+                  {'text': userMessage}
+                ]
+              }
             ],
+            'generationConfig': {
+              'maxOutputTokens': 450,
+              'temperature': 0.7,
+            },
           }),
         )
         .timeout(const Duration(seconds: 30));
@@ -86,50 +94,29 @@ $compilerOutput
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = data['error'];
       if (error is Map<String, dynamic>) {
-        throw OpenAiApiException(
-          error['message']?.toString() ?? response.body,
-          statusCode: response.statusCode,
-          type: error['type']?.toString(),
-          code: error['code']?.toString(),
-        );
+        throw Exception(error['message']?.toString() ?? response.body);
       }
-      throw OpenAiApiException(response.body, statusCode: response.statusCode);
+      throw Exception(response.body);
     }
  
     return _extractText(data);
   }
  
   String _extractText(Map<String, dynamic> data) {
-    final choices = data['choices'] as List?;
-    if (choices != null && choices.isNotEmpty) {
-      final message = choices[0]['message'] as Map<String, dynamic>?;
-      final content = message?['content']?.toString().trim() ?? '';
-      if (content.isNotEmpty) return content;
+    final candidates = data['candidates'] as List?;
+    if (candidates != null && candidates.isNotEmpty) {
+      final content = candidates[0]['content'] as Map<String, dynamic>?;
+      final parts = content?['parts'] as List?;
+      if (parts != null && parts.isNotEmpty) {
+        final text = parts[0]['text']?.toString().trim() ?? '';
+        if (text.isNotEmpty) return text;
+      }
     }
-    return 'OpenAI бос жауап қайтарды.';
+    return 'Gemini бос жауап қайтарды.';
   }
  
   String _formatError(Object error) {
-    if (error is OpenAiApiException) {
-      return 'OpenAI қатесі: ${error.message}';
-    }
-    return 'OpenAI-ға қосылу кезінде қате: $error';
+    return 'Gemini-ге қосылу кезінде қате: $error';
   }
 }
  
-class OpenAiApiException implements Exception {
-  OpenAiApiException(
-    this.message, {
-    required this.statusCode,
-    this.type,
-    this.code,
-  });
- 
-  final String message;
-  final int statusCode;
-  final String? type;
-  final String? code;
- 
-  @override
-  String toString() => message;
-}
