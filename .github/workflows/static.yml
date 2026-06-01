@@ -11,7 +11,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-      - run: flutter build web --release --base-href "/python_logic_app/"
+      - run: flutter build web --release --base-href "/python_logic_app/" --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY1 }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
