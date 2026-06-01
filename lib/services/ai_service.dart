@@ -3,8 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
  
 class AiTutorService {
-  // Мұнда өз Gemini API кілтіңізді қойыңыз
-  static const String _apiKey = 'AIzaSyBj_8YkyL0cpFHEcwpAgExpIgzJkMLdy2E';
+  // Кілт кодта жазылмайды — build кезінде беріледі
+  static const String _apiKey =
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
   static const String _modelName = 'gemini-2.0-flash';
  
   Uri get _apiUrl => Uri.parse(
@@ -13,6 +14,9 @@ class AiTutorService {
   Future<String> sendChatMessage(String userMessage) async {
     if (userMessage.trim().isEmpty) {
       return 'Сұрақ бос болмауы керек.';
+    }
+    if (_apiKey.isEmpty) {
+      return 'Қате: GEMINI_API_KEY орнатылмаған.';
     }
  
     const systemPrompt =
@@ -33,6 +37,10 @@ class AiTutorService {
   }
  
   Future<String> getAiHint(String studentCode, String compilerOutput) async {
+    if (_apiKey.isEmpty) {
+      return 'Қате: GEMINI_API_KEY орнатылмаған.';
+    }
+ 
     const systemPrompt =
         'Сен мектептегі Python бағдарламалау логикасын үйрететін AI тьюторсың. '
         'Оқушыға қазақ тілінде өте қарапайым, қысқа және түсінікті жауап бер. '
